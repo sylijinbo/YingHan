@@ -831,9 +831,10 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 
     [self _updateComposedBuffer:candidateString];
 
-    [self showPreeditString:candidateString.string];
+    NSString *originalInput = [self originalBuffer];
+    [self showPreeditString:originalInput.length > 0 ? originalInput : candidateString.string];
 
-    _insertionIndex = candidateString.length;
+    _insertionIndex = originalInput.length > 0 ? originalInput.length : candidateString.length;
 
     BOOL showTranslation = [preference boolForKey:@"showTranslation"];
     if (showTranslation) {
