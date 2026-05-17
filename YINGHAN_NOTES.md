@@ -80,22 +80,19 @@ dist/YingHan.app
 
 ## Packaging
 
-The latest local packaging outputs are:
+The current local packaging target for iterative testing is the app bundle only:
 
 ```text
-dist/YingHan.zip
-dist/YingHan-user.pkg
+dist/YingHan.app
 ```
 
-`YingHan.zip` is a portable archive of `YingHan.app`.
-
-`YingHan-user.pkg` installs the app into the current user's input method folder:
+During the current local test cycle, zip and pkg outputs are intentionally not required. The app bundle is installed directly into:
 
 ```text
 ~/Library/Input Methods/YingHan.app
 ```
 
-The package is unsigned. The app bundle itself is ad-hoc signed for local testing.
+The app bundle itself is ad-hoc signed for local testing.
 
 ## Install
 
@@ -146,46 +143,62 @@ The latest verified preference response included:
 
 ```json
 {
-  "enableRightShiftModeSwitch": true,
+  "enableRightShiftModeSwitch": false,
   "enableNextWordPrediction": false,
   "enableLeftCommandPinyinSwitch": false,
   "commitWordWithSpace": true,
   "enableRightCommandPinyinSwitch": true,
-  "enableLeftShiftModeSwitch": false,
-  "showTranslation": true
+  "enableLeftShiftModeSwitch": true,
+  "showTranslation": true,
+  "candidatePanelLayout": "horizontal"
 }
 ```
 
-## Finder Copy
+## Candidate Panel Layout
 
-The working project is:
+The preference key `candidatePanelLayout` controls the candidate panel layout:
+
+- `vertical`: default legacy layout, backed by `kIMKSingleColumnScrollingCandidatePanel`
+- `horizontal`: Sogou-like single-row layout, backed by `kIMKSingleRowSteppingCandidatePanel`
+
+The preference web UI exposes this as a vertical/horizontal choice. The default remains `vertical` so existing installs do not unexpectedly change layout after upgrade.
+
+Horizontal mode notes:
+
+- The marked text above the candidate panel should continue to show the raw input letters, such as `d`, `de`, or `xiang`, while candidate highlight movement updates the internal selected candidate for commit.
+- Number keys `1` through `9` should select the candidate shown at the matching visible screen position.
+- Left/right arrows are intended to move the visible highlight by one candidate.
+- Up/down arrows are intended to use InputMethodKit page stepping.
+- The horizontal panel can show fewer than 9 candidates on a page because InputMethodKit decides how many fit in the current panel width. Avoid assuming a fixed 9-candidate page when maintaining selection state.
+
+Latest local install verification:
 
 ```text
-/Users/jinboli/Documents/Codex/2026-05-16/build-macos-apps-swiftpm-macos-users/YingHan
+dist/YingHan.app/Contents/MacOS/YingHan
+~/Library/Input Methods/YingHan.app/Contents/MacOS/YingHan
 ```
 
-The Finder-facing copy is:
-
-```text
-/Users/jinboli/Documents/YingHan
-```
-
-Sync the latest working project to the Finder-facing copy:
+These were verified with matching SHA-256 hashes after the latest reinstall. The installed app was launched manually with:
 
 ```bash
-./script/export_to_documents.sh
+/usr/bin/open -n "$HOME/Library/Input Methods/YingHan.app"
 ```
-
-That script backs up an existing `/Users/jinboli/Documents/YingHan` before replacing it.
-
-The old Finder-facing copy that still showed the previous `master` history was backed up here:
-
-```text
-/Users/jinboli/Documents/YingHan.before-20260517103902
-```
-
-After the latest sync, `/Users/jinboli/Documents/YingHan` is also on `main -> origin/main` and points to `https://github.com/sylijinbo/YingHan.git`.
 
 ## Notes
 
 CocoaPods generated support files may still contain upstream names such as `Pods-hallelujah`. Those are generated dependency integration names and are currently left in place to avoid breaking the existing CocoaPods project wiring.
+
+The repository-level validation rule is still:
+
+```bash
+sh format-code.sh
+sh unit-tests.sh
+bash build.sh
+```
+
+On the current machine these commands are blocked by local tooling:
+
+- `format-code.sh` needs `clang-format`; `brew` is not installed.
+- `unit-tests.sh` and `build.sh` need full Xcode; the active developer directory is `/Library/Developer/CommandLineTools`.
+
+Use `./script/build_local_clt.sh` for local app bundle builds until full Xcode and formatting tools are available.
