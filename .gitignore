@@ -1,0 +1,54 @@
+.DS_Store
+*.swp
+profile
+
+*~.nib
+
+
+DerivedData/
+
+# NB: slash on the end, so we only remove the FOLDER, not any files that were badly named "build"
+
+build/
+
+
+
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+#    NB: also, whitelist the default ones, some projects need to use these
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+
+
+hallelujah.xcodeproj/project.xcworkspace/xcuserdata/
+hallelujah.xcodeproj/xcuserdata/
+
+.idea/
+hallelujahIM.iml
+hallelujah.xcworkspace/xcshareddata/
+*.xcuserstate
+*/xcuserdata/*
+*xcworkspace/xcuserdata/*
+hallelujah.xcworkspace/xcuserdata
+hallelujah.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+util/releases.json
+.vscode/
+node_modules/
+*.dmg
+*.pkg
+*.zip
+dist/
+*.bak-*
+
+Pods/Target Support Files/GCDWebServer/GCDWebServer.debug.xcconfig
+Pods/Target Support Files/GCDWebServer/GCDWebServer.release.xcconfig
+Pods/Target Support Files/MDCDamerauLevenshtein/MDCDamerauLevenshtein.debug.xcconfig
+Pods/Target Support Files/MDCDamerauLevenshtein/MDCDamerauLevenshtein.release.xcconfig
+Pods/Pods.xcodeproj/xcuserdata/yuweidong.xcuserdatad/
+*.xcuserdatad
+*.sqlite3-shm
+*.sqlite3-wal

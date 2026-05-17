@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>YingHan input method preference</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <div id="app">
+      <h2>YingHan Preferences</h2>
+      <form v-on:submit.prevent="updatePreference()">
+        <label>
+          Show Translation:
+          <input type="checkbox" v-model="preference.showTranslation" />
+        </label>
+        <label>
+          Commit word with space:
+          <input type="checkbox" v-model="preference.commitWordWithSpace" />
+        </label>
+        <label>
+          Next-Word Prediction (ngram):
+          <input type="checkbox" v-model="preference.enableNextWordPrediction" />
+        </label>
+        <fieldset>
+          <legend>Smart English / normal English switch</legend>
+          <label>
+            Left Shift:
+            <input type="checkbox" v-model="preference.enableLeftShiftModeSwitch" />
+          </label>
+          <label>
+            Right Shift:
+            <input type="checkbox" v-model="preference.enableRightShiftModeSwitch" />
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>English / pinyin Chinese switch</legend>
+          <label>
+            Left Command:
+            <input type="checkbox" v-model="preference.enableLeftCommandPinyinSwitch" />
+          </label>
+          <label>
+            Right Command:
+            <input type="checkbox" v-model="preference.enableRightCommandPinyinSwitch" />
+          </label>
+        </fieldset>
+        <button :disabled="loading">
+          {{ loading ? "loading..." : "Save" }}
+        </button>
+        <span class="status" v-if="saveStatus">{{ saveStatus }}</span>
+      </form>
+
+      <h2>Substitutions</h2>
+      <p class="hint">Define shortcuts that expand into full text (e.g. "yem" → "you expand me")</p>
+      <form v-on:submit.prevent="addSubstitution()">
+        <input type="text" v-model="newKey" placeholder="shortcut" required />
+        <input type="text" v-model="newValue" placeholder="expansion" required />
+        <button :disabled="subLoading">Add</button>
+      </form>
+      <ul v-if="substitutions">
+        <li v-for="(value, key) in substitutions" :key="key">
+          <code>{{ key }}</code> → <code>{{ value }}</code>
+          <button class="del" @click="removeSubstitution(key)">×</button>
+        </li>
+      </ul>
+      <p v-if="substitutions && Object.keys(substitutions).length === 0" class="hint">
+        No substitutions defined.
+      </p>
+    </div>
+    <script src="./vue.js"></script>
+    <script src="./index.js"></script>
+  </body>
+</html>
