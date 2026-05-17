@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Status
 
-This local fork is renamed from the upstream `YingHan` project to `YingHan`.
+This project is now maintained as `YingHan` under the user's own GitHub repository.
 
 Visible project names are now:
 
@@ -28,6 +28,33 @@ The icon files intentionally use the original upstream icon assets:
 
 - `him.icns`
 - `him.png`
+
+## GitHub Repository
+
+The active GitHub repository is:
+
+```text
+https://github.com/sylijinbo/YingHan.git
+```
+
+Local git state:
+
+- Active branch: `main`
+- Upstream: `origin/main`
+- Remote fetch/push URL: `https://github.com/sylijinbo/YingHan.git`
+- Old local `master` branch removed
+- Old local release tags removed
+- Old Xcode source-control checkout metadata removed
+
+Current public history intentionally starts with a clean YingHan import:
+
+```text
+d0b6ad9 Initial YingHan import
+82e4b7b Add bundled dictionaries
+8c7cd63 Bind project metadata to YingHan repository
+```
+
+The GitHub Actions workflow file is not uploaded because the available GitHub token does not have the `workflow` scope. `.github/workflows/` is ignored locally until a token with that scope is available.
 
 ## Local Build
 
@@ -150,6 +177,14 @@ Sync the latest working project to the Finder-facing copy:
 ```
 
 That script backs up an existing `/Users/jinboli/Documents/YingHan` before replacing it.
+
+The old Finder-facing copy that still showed the previous `master` history was backed up here:
+
+```text
+/Users/jinboli/Documents/YingHan.before-20260517103902
+```
+
+After the latest sync, `/Users/jinboli/Documents/YingHan` is also on `main -> origin/main` and points to `https://github.com/sylijinbo/YingHan.git`.
 
 ## Notes
 
