@@ -47,6 +47,30 @@ legend {
     padding: 0 4px;
 }
 
+.candidate-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.candidate-layout legend {
+    width: 100%;
+}
+
+.candidate-layout label {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+.candidate-layout label:has(input:checked) {
+    border-color: #777;
+    background: #f0f0f0;
+}
+
 .status {
     color: #555;
     font-size: 13px;

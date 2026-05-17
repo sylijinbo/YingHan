@@ -10,6 +10,7 @@ var app = new Vue({
       showTranslation: true,
       commitWordWithSpace: true,
       enableNextWordPrediction: false,
+      candidatePanelLayout: "vertical",
       enableLeftShiftModeSwitch: false,
       enableRightShiftModeSwitch: true,
       enableLeftCommandPinyinSwitch: false,

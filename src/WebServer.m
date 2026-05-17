@@ -3,9 +3,11 @@
 #import "GCDWebServer.h"
 #import "GCDWebServerDataRequest.h"
 #import "GCDWebServerDataResponse.h"
+#import <InputMethodKit/InputMethodKit.h>
 
 extern NSUserDefaults *preference;
 extern ConversionEngine *engine;
+extern IMKCandidates *sharedCandidates;
 
 NSString *TRANSLATION_KEY = @"showTranslation";
 NSString *COMMIT_WORD_WITH_SPACE_KEY = @"commitWordWithSpace";
@@ -14,6 +16,23 @@ NSString *ENABLE_LEFT_SHIFT_MODE_SWITCH_KEY = @"enableLeftShiftModeSwitch";
 NSString *ENABLE_RIGHT_SHIFT_MODE_SWITCH_KEY = @"enableRightShiftModeSwitch";
 NSString *ENABLE_LEFT_COMMAND_PINYIN_SWITCH_KEY = @"enableLeftCommandPinyinSwitch";
 NSString *ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY = @"enableRightCommandPinyinSwitch";
+static NSString *const CANDIDATE_PANEL_LAYOUT_KEY = @"candidatePanelLayout";
+static NSString *const CANDIDATE_PANEL_LAYOUT_VERTICAL = @"vertical";
+static NSString *const CANDIDATE_PANEL_LAYOUT_HORIZONTAL = @"horizontal";
+
+static NSString *NormalizedCandidatePanelLayout(id layoutValue) {
+    if ([layoutValue isKindOfClass:[NSString class]] && [layoutValue isEqualToString:CANDIDATE_PANEL_LAYOUT_HORIZONTAL]) {
+        return CANDIDATE_PANEL_LAYOUT_HORIZONTAL;
+    }
+    return CANDIDATE_PANEL_LAYOUT_VERTICAL;
+}
+
+static IMKCandidatePanelType CandidatePanelTypeForLayout(NSString *layout) {
+    if ([layout isEqualToString:CANDIDATE_PANEL_LAYOUT_HORIZONTAL]) {
+        return kIMKSingleRowSteppingCandidatePanel;
+    }
+    return kIMKSingleColumnScrollingCandidatePanel;
+}
 
 @interface WebServer ()
 
@@ -57,7 +76,9 @@ static int port = 62718;
                               ENABLE_LEFT_SHIFT_MODE_SWITCH_KEY : @([preference boolForKey:ENABLE_LEFT_SHIFT_MODE_SWITCH_KEY]),
                               ENABLE_RIGHT_SHIFT_MODE_SWITCH_KEY : @([preference boolForKey:ENABLE_RIGHT_SHIFT_MODE_SWITCH_KEY]),
                               ENABLE_LEFT_COMMAND_PINYIN_SWITCH_KEY : @([preference boolForKey:ENABLE_LEFT_COMMAND_PINYIN_SWITCH_KEY]),
-                              ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY : @([preference boolForKey:ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY])
+                              ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY : @([preference boolForKey:ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY]),
+                              CANDIDATE_PANEL_LAYOUT_KEY :
+                                  NormalizedCandidatePanelLayout([preference stringForKey:CANDIDATE_PANEL_LAYOUT_KEY])
                           }];
                       }];
 
@@ -91,7 +112,13 @@ static int port = 62718;
                           bool enableRightCommandPinyinSwitch = [data[ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY] boolValue];
                           [preference setBool:enableRightCommandPinyinSwitch forKey:ENABLE_RIGHT_COMMAND_PINYIN_SWITCH_KEY];
 
-                          return [GCDWebServerDataResponse responseWithJSONObject:data];
+                          NSString *candidatePanelLayout = NormalizedCandidatePanelLayout(data[CANDIDATE_PANEL_LAYOUT_KEY]);
+                          [preference setObject:candidatePanelLayout forKey:CANDIDATE_PANEL_LAYOUT_KEY];
+                          [sharedCandidates setPanelType:CandidatePanelTypeForLayout(candidatePanelLayout)];
+
+                          NSMutableDictionary *response = [data mutableCopy];
+                          response[CANDIDATE_PANEL_LAYOUT_KEY] = candidatePanelLayout;
+                          return [GCDWebServerDataResponse responseWithJSONObject:response];
                       }];
 
     [webServer addHandlerForMethod:@"GET"

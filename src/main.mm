@@ -12,6 +12,17 @@ IMKCandidates *sharedCandidates;
 
 static const unsigned char kInstallLocation[] = "/Library/Input Methods/YingHan.app";
 static NSString *const kSourceID = @"com.jinboli.inputmethod.yinghan";
+static NSString *const kCandidatePanelLayoutKey = @"candidatePanelLayout";
+static NSString *const kCandidatePanelLayoutVertical = @"vertical";
+static NSString *const kCandidatePanelLayoutHorizontal = @"horizontal";
+
+static IMKCandidatePanelType candidatePanelTypeFromPreference() {
+    NSString *layout = [preference stringForKey:(NSString *)kCandidatePanelLayoutKey];
+    if ([layout isEqualToString:(NSString *)kCandidatePanelLayoutHorizontal]) {
+        return kIMKSingleRowSteppingCandidatePanel;
+    }
+    return kIMKSingleColumnScrollingCandidatePanel;
+}
 
 void registerInputSource() {
     CFURLRef installedLocationURL =
@@ -67,6 +78,7 @@ void initPreference() {
         @"enableRightShiftModeSwitch" : @YES,
         @"enableLeftCommandPinyinSwitch" : @NO,
         @"enableRightCommandPinyinSwitch" : @YES,
+        kCandidatePanelLayoutKey : kCandidatePanelLayoutVertical,
     };
     [preference registerDefaults:defaultPrefs];
 }
@@ -89,7 +101,9 @@ int main(int argc, char *argv[]) {
     NSString *identifier = [NSBundle mainBundle].bundleIdentifier;
     IMKServer *server = [[IMKServer alloc] initWithName:(NSString *)kConnectionName bundleIdentifier:identifier];
 
-    sharedCandidates = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleColumnScrollingCandidatePanel];
+    initPreference();
+
+    sharedCandidates = [[IMKCandidates alloc] initWithServer:server panelType:candidatePanelTypeFromPreference()];
 
     if (!sharedCandidates) {
         NSLog(@"Fatal error: Cannot initialize shared candidate panel with connection %@.", kConnectionName);
@@ -101,8 +115,6 @@ int main(int argc, char *argv[]) {
     [[NSBundle mainBundle] loadNibNamed:@"AnnotationWindow" owner:[NSApplication sharedApplication] topLevelObjects:nil];
 
     [[NSBundle mainBundle] loadNibNamed:@"PreferencesMenu" owner:[NSApplication sharedApplication] topLevelObjects:nil];
-
-    initPreference();
 
     [[WebServer sharedServer] start];
 

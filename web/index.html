@@ -21,6 +21,17 @@
           Next-Word Prediction (ngram):
           <input type="checkbox" v-model="preference.enableNextWordPrediction" />
         </label>
+        <fieldset class="candidate-layout">
+          <legend>Candidate panel layout</legend>
+          <label>
+            <input type="radio" value="vertical" v-model="preference.candidatePanelLayout" />
+            Vertical
+          </label>
+          <label>
+            <input type="radio" value="horizontal" v-model="preference.candidatePanelLayout" />
+            Horizontal
+          </label>
+        </fieldset>
         <fieldset>
           <legend>Smart English / normal English switch</legend>
           <label>
