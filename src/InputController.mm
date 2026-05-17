@@ -13,7 +13,8 @@ extern ConversionEngine *engine;
 
 typedef NSInteger KeyCode;
 static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC = 53, KEY_ARROW_DOWN = 125, KEY_ARROW_UP = 126,
-                     KEY_LEFT_SHIFT = 56, KEY_RIGHT_SHIFT = 60, KEY_LEFT_COMMAND = 55, KEY_RIGHT_COMMAND = 54;
+                     KEY_ARROW_LEFT = 123, KEY_ARROW_RIGHT = 124, KEY_LEFT_SHIFT = 56, KEY_RIGHT_SHIFT = 60, KEY_LEFT_COMMAND = 55,
+                     KEY_RIGHT_COMMAND = 54;
 
 @interface InputController ()
 
@@ -23,6 +24,22 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 - (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode;
 - (void)switchToChineseMode:(id)sender;
 - (void)toggleEnglishPinyinMode:(id)sender;
+- (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender;
+- (BOOL)moveVisibleCandidateHighlightByOffset:(NSInteger)offset;
+- (BOOL)pageVisibleCandidatesByOffset:(NSInteger)offset;
+- (NSInteger)currentVisibleCandidateLine;
+- (void)reloadCandidatePanelForCurrentInput;
+- (NSArray *)visibleCandidatesForPageStartIndex:(NSInteger)pageStartIndex;
+- (void)showHorizontalCandidatePageStartingAt:(NSInteger)pageStartIndex selectedLine:(NSInteger)selectedLine;
+- (BOOL)syncCurrentCandidateIndexWithIMKSelection;
+- (void)syncCurrentCandidateIndexWithCandidateString:(NSString *)candidate;
+- (void)resetCandidateSelection;
+- (void)prepareCandidatePanelForDisplay;
+- (NSInteger)clampedCurrentCandidateIndex;
+- (void)updateComposedCandidateAtAbsoluteIndex:(NSInteger)candidateIndex;
+- (void)selectCandidateAtAbsoluteIndex:(NSInteger)candidateIndex;
+- (NSString *)candidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
+- (NSString *)fallbackCandidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
 
 @end
 
@@ -55,10 +72,6 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
         }
         break;
     case NSEventTypeKeyDown:
-        if (_inputMode == YingHanInputModeEnglish) {
-            break;
-        }
-
         // Let system and app shortcuts such as Command+C/V pass through before
         // treating their letter key as pinyin input.
         if (modifiers & NSEventModifierFlagCommand)
@@ -70,6 +83,20 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 
         if (modifiers & NSEventModifierFlagControl) {
             return false;
+        }
+
+        if ([self handleCandidateKeyEvent:event client:sender]) {
+            handled = YES;
+            break;
+        }
+
+        if ([sharedCandidates isVisible] && (event.keyCode == KEY_ARROW_UP || event.keyCode == KEY_ARROW_DOWN)) {
+            handled = NO;
+            break;
+        }
+
+        if (_inputMode == YingHanInputModeEnglish) {
+            break;
         }
 
         if (_inputMode == YingHanInputModeChinese && [self isPinyinChar:event]) {
@@ -179,21 +206,17 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     char ch = [characters characterAtIndex:0];
     if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
         [self originalBufferAppend:characters client:sender];
-        [sharedCandidates updateCandidates];
-        [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+        [self resetCandidateSelection];
+        [self reloadCandidatePanelForCurrentInput];
         return YES;
     }
 
     if ([[NSCharacterSet decimalDigitCharacterSet] characterIsMember:ch]) {
         if (hasBufferedText && [sharedCandidates isVisible]) {
             int pressedNumber = characters.intValue;
-            NSString *candidate;
-            int pageSize = 9;
-            if (_currentCandidateIndex <= pageSize) {
-                candidate = _candidates[pressedNumber - 1];
-            } else {
-                candidate = _candidates[pageSize * (_currentCandidateIndex / pageSize - 1) + (_currentCandidateIndex % pageSize) +
-                                        pressedNumber - 1];
+            NSString *candidate = [self candidateForSelectionKeyIndex:pressedNumber - 1];
+            if (!candidate) {
+                return YES;
             }
             [self cancelComposition];
             [self setComposedBuffer:candidate];
@@ -249,49 +272,16 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     char ch = [characters characterAtIndex:0];
     if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
         [self originalBufferAppend:characters client:sender];
-
-        [sharedCandidates updateCandidates];
-        [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+        [self resetCandidateSelection];
+        [self reloadCandidatePanelForCurrentInput];
         return YES;
     }
 
     if ([self isMojaveAndLaterSystem]) {
-        BOOL isCandidatesVisible = [sharedCandidates isVisible];
-        if (isCandidatesVisible) {
-            if (keyCode == KEY_ARROW_DOWN) {
-                [sharedCandidates moveDown:self];
-                _currentCandidateIndex++;
-                return NO;
-            }
-
-            if (keyCode == KEY_ARROW_UP) {
-                [sharedCandidates moveUp:self];
-                _currentCandidateIndex--;
-                return NO;
-            }
-        }
-
         if ([[NSCharacterSet decimalDigitCharacterSet] characterIsMember:ch]) {
             if (!hasBufferedText) {
                 [self appendToComposedBuffer:characters];
                 [self commitCompositionWithoutSpace:sender];
-                return YES;
-            }
-
-            if (isCandidatesVisible) { // use 1~9 digital numbers as selection keys
-                int pressedNumber = characters.intValue;
-                NSString *candidate;
-                int pageSize = 9;
-                if (_currentCandidateIndex <= pageSize) {
-                    candidate = _candidates[pressedNumber - 1];
-                } else {
-                    candidate = _candidates[pageSize * (_currentCandidateIndex / pageSize - 1) + (_currentCandidateIndex % pageSize) +
-                                            pressedNumber - 1];
-                }
-                [self cancelComposition];
-                [self setComposedBuffer:candidate];
-                [self setOriginalBuffer:candidate];
-                [self commitComposition:sender];
                 return YES;
             }
         }
@@ -306,6 +296,332 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     }
 
     return NO;
+}
+
+- (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender {
+    if (![sharedCandidates isVisible]) {
+        return NO;
+    }
+
+    NSString *bufferedText = [self originalBuffer];
+    if (!bufferedText || bufferedText.length == 0) {
+        return NO;
+    }
+
+    _currentClient = sender;
+    NSInteger keyCode = event.keyCode;
+
+    if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        if (keyCode == KEY_ARROW_LEFT) {
+            return [self moveVisibleCandidateHighlightByOffset:-1];
+        }
+
+        if (keyCode == KEY_ARROW_RIGHT) {
+            return [self moveVisibleCandidateHighlightByOffset:1];
+        }
+
+        if (keyCode == KEY_ARROW_UP) {
+            return [self pageVisibleCandidatesByOffset:-1];
+        }
+
+        if (keyCode == KEY_ARROW_DOWN) {
+            return [self pageVisibleCandidatesByOffset:1];
+        }
+    }
+
+    if (keyCode == KEY_ARROW_UP || keyCode == KEY_ARROW_DOWN) {
+        return NO;
+    }
+
+    NSString *characters = event.characters;
+    if (!characters || characters.length == 0) {
+        return NO;
+    }
+
+    char ch = [characters characterAtIndex:0];
+    if (![[NSCharacterSet decimalDigitCharacterSet] characterIsMember:ch]) {
+        return NO;
+    }
+
+    int pressedNumber = characters.intValue;
+    if (pressedNumber < 1 || pressedNumber > 9) {
+        return NO;
+    }
+
+    NSString *candidate = [self candidateForSelectionKeyIndex:pressedNumber - 1];
+    if (!candidate) {
+        return YES;
+    }
+
+    [self cancelComposition];
+    [self setComposedBuffer:candidate];
+    [self setOriginalBuffer:candidate];
+    if (_inputMode == YingHanInputModeChinese) {
+        [self commitCompositionWithoutSpace:sender];
+    } else {
+        [self commitComposition:sender];
+    }
+    return YES;
+}
+
+- (BOOL)moveVisibleCandidateHighlightByOffset:(NSInteger)offset {
+    if (![sharedCandidates isVisible] || _candidates.count == 0) {
+        return NO;
+    }
+    if (offset == 0) {
+        return YES;
+    }
+
+    NSInteger currentIndex = [self clampedCurrentCandidateIndex];
+    NSInteger targetIndex = currentIndex + (offset > 0 ? 1 : -1);
+    if (targetIndex < 1) {
+        targetIndex = 1;
+    } else if (targetIndex > (NSInteger)_candidates.count) {
+        targetIndex = _candidates.count;
+    }
+
+    NSInteger currentPageStart = ((currentIndex - 1) / 9) * 9 + 1;
+    NSInteger currentPageEnd = MIN(currentPageStart + 8, (NSInteger)_candidates.count);
+    if (targetIndex < currentPageStart) {
+        targetIndex = currentPageStart;
+    } else if (targetIndex > currentPageEnd) {
+        targetIndex = currentPageEnd;
+    }
+
+    if (targetIndex > currentIndex) {
+        [sharedCandidates moveRight:self];
+    } else if (targetIndex < currentIndex) {
+        [sharedCandidates moveLeft:self];
+    }
+
+    [self updateComposedCandidateAtAbsoluteIndex:targetIndex];
+    return YES;
+}
+
+- (BOOL)pageVisibleCandidatesByOffset:(NSInteger)offset {
+    if (![sharedCandidates isVisible] || _candidates.count == 0) {
+        return NO;
+    }
+
+    NSInteger currentIndex = [self clampedCurrentCandidateIndex];
+    NSInteger currentPageStart = ((currentIndex - 1) / 9) * 9 + 1;
+    NSInteger targetPageStart = currentPageStart + (offset > 0 ? 9 : -9);
+    if (targetPageStart < 1) {
+        targetPageStart = 1;
+    } else if (targetPageStart > (NSInteger)_candidates.count) {
+        targetPageStart = ((NSInteger)(_candidates.count - 1) / 9) * 9 + 1;
+    }
+
+    NSInteger currentLine = (currentIndex - 1) % 9;
+    NSInteger targetIndex = targetPageStart + currentLine;
+    if (targetIndex > (NSInteger)_candidates.count) {
+        targetIndex = _candidates.count;
+    }
+
+    [self showHorizontalCandidatePageStartingAt:targetPageStart - 1 selectedLine:targetIndex - targetPageStart];
+    return YES;
+}
+
+- (NSInteger)currentVisibleCandidateLine {
+    NSAttributedString *selectedCandidate = [sharedCandidates selectedCandidateString];
+    if (selectedCandidate.string.length > 0) {
+        NSInteger selectedIdentifier = [sharedCandidates candidateStringIdentifier:selectedCandidate.string];
+        NSInteger selectedLine = [sharedCandidates lineNumberForCandidateWithIdentifier:selectedIdentifier];
+        if (selectedLine != NSNotFound) {
+            if (selectedLine < 0) {
+                return 0;
+            }
+            if (selectedLine > 8) {
+                return 8;
+            }
+            return selectedLine;
+        }
+    }
+
+    NSInteger currentIndex = _currentCandidateIndex;
+    if (currentIndex < 1) {
+        currentIndex = 1;
+    } else if (currentIndex > (NSInteger)_candidates.count) {
+        currentIndex = _candidates.count;
+    }
+    return (currentIndex - 1) % 9;
+}
+
+- (void)reloadCandidatePanelForCurrentInput {
+    [self prepareCandidatePanelForDisplay];
+
+    if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        [self candidates:self];
+        [self showHorizontalCandidatePageStartingAt:0 selectedLine:0];
+        [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+        return;
+    }
+
+    [sharedCandidates updateCandidates];
+    [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+}
+
+- (NSArray *)visibleCandidatesForPageStartIndex:(NSInteger)pageStartIndex {
+    if (_candidates.count == 0) {
+        return @[];
+    }
+
+    if (pageStartIndex < 0) {
+        pageStartIndex = 0;
+    } else if (pageStartIndex >= (NSInteger)_candidates.count) {
+        pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
+    }
+
+    NSInteger candidateCount = MIN(9, (NSInteger)_candidates.count - pageStartIndex);
+    return [_candidates subarrayWithRange:NSMakeRange(pageStartIndex, candidateCount)];
+}
+
+- (void)showHorizontalCandidatePageStartingAt:(NSInteger)pageStartIndex selectedLine:(NSInteger)selectedLine {
+    NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:pageStartIndex];
+    if (visibleCandidates.count == 0) {
+        [sharedCandidates setCandidateData:@[]];
+        return;
+    }
+
+    [sharedCandidates setCandidateData:visibleCandidates];
+    [sharedCandidates clearSelection];
+
+    NSString *firstCandidate = visibleCandidates[0];
+    NSInteger firstCandidateIdentifier = [sharedCandidates candidateStringIdentifier:firstCandidate];
+    [sharedCandidates selectCandidateWithIdentifier:firstCandidateIdentifier];
+
+    if (selectedLine < 0) {
+        selectedLine = 0;
+    } else if (selectedLine >= (NSInteger)visibleCandidates.count) {
+        selectedLine = visibleCandidates.count - 1;
+    }
+
+    NSInteger candidateIndex = pageStartIndex + selectedLine + 1;
+    [self updateComposedCandidateAtAbsoluteIndex:candidateIndex];
+
+    for (NSInteger i = 0; i < selectedLine; i++) {
+        [sharedCandidates moveRight:self];
+    }
+}
+
+- (BOOL)syncCurrentCandidateIndexWithIMKSelection {
+    NSAttributedString *selectedCandidate = [sharedCandidates selectedCandidateString];
+    if (selectedCandidate.string.length == 0) {
+        return NO;
+    }
+
+    NSUInteger candidateIndex = [_candidates indexOfObject:selectedCandidate.string];
+    if (candidateIndex == NSNotFound) {
+        return NO;
+    }
+
+    _currentCandidateIndex = candidateIndex + 1;
+    return YES;
+}
+
+- (void)syncCurrentCandidateIndexWithCandidateString:(NSString *)candidate {
+    if (!candidate || candidate.length == 0) {
+        return;
+    }
+
+    NSUInteger candidateIndex = [_candidates indexOfObject:candidate];
+    if (candidateIndex != NSNotFound) {
+        _currentCandidateIndex = candidateIndex + 1;
+    }
+}
+
+- (void)resetCandidateSelection {
+    _currentCandidateIndex = 1;
+    [sharedCandidates clearSelection];
+}
+
+- (void)prepareCandidatePanelForDisplay {
+    [sharedCandidates setAttributes:@{
+        IMKCandidatesSendServerKeyEventFirst : @YES,
+    }];
+}
+
+- (NSInteger)clampedCurrentCandidateIndex {
+    NSInteger currentIndex = _currentCandidateIndex;
+    if (currentIndex < 1) {
+        currentIndex = 1;
+    } else if (currentIndex > (NSInteger)_candidates.count) {
+        currentIndex = _candidates.count;
+    }
+    _currentCandidateIndex = currentIndex;
+    return currentIndex;
+}
+
+- (void)updateComposedCandidateAtAbsoluteIndex:(NSInteger)candidateIndex {
+    if (candidateIndex < 1 || candidateIndex > (NSInteger)_candidates.count) {
+        return;
+    }
+
+    NSString *candidate = _candidates[candidateIndex - 1];
+    _currentCandidateIndex = candidateIndex;
+    [self candidateSelectionChanged:[[NSAttributedString alloc] initWithString:candidate]];
+}
+
+- (void)selectCandidateAtAbsoluteIndex:(NSInteger)candidateIndex {
+    if (candidateIndex < 1 || candidateIndex > (NSInteger)_candidates.count) {
+        return;
+    }
+
+    NSString *candidate = _candidates[candidateIndex - 1];
+    NSInteger candidateIdentifier = [sharedCandidates candidateStringIdentifier:candidate];
+    [sharedCandidates selectCandidateWithIdentifier:candidateIdentifier];
+    _currentCandidateIndex = candidateIndex;
+    [self candidateSelectionChanged:[[NSAttributedString alloc] initWithString:candidate]];
+}
+
+- (NSString *)candidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex {
+    if (selectionKeyIndex < 0 || selectionKeyIndex >= 9) {
+        return nil;
+    }
+
+    if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        NSInteger currentIndex = [self clampedCurrentCandidateIndex];
+        NSInteger pageStartIndex = ((currentIndex - 1) / 9) * 9;
+        NSInteger candidateIndex = pageStartIndex + selectionKeyIndex;
+        if (candidateIndex < 0 || candidateIndex >= (NSInteger)_candidates.count) {
+            return nil;
+        }
+
+        _currentCandidateIndex = candidateIndex + 1;
+        return _candidates[candidateIndex];
+    }
+
+    NSInteger candidateIdentifier = [sharedCandidates candidateIdentifierAtLineNumber:selectionKeyIndex];
+    if (candidateIdentifier != NSNotFound && [sharedCandidates selectCandidateWithIdentifier:candidateIdentifier]) {
+        NSAttributedString *candidateString = [sharedCandidates selectedCandidateString];
+        if (candidateString.string.length > 0) {
+            [self syncCurrentCandidateIndexWithCandidateString:candidateString.string];
+            return candidateString.string;
+        }
+    }
+
+    return [self fallbackCandidateForSelectionKeyIndex:selectionKeyIndex];
+}
+
+- (NSString *)fallbackCandidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex {
+    if (_candidates.count == 0) {
+        return nil;
+    }
+
+    NSInteger currentIndex = _currentCandidateIndex;
+    if (currentIndex < 1) {
+        currentIndex = 1;
+    } else if (currentIndex > (NSInteger)_candidates.count) {
+        currentIndex = _candidates.count;
+    }
+
+    NSInteger pageStartIndex = ((currentIndex - 1) / 9) * 9;
+    NSInteger candidateIndex = pageStartIndex + selectionKeyIndex;
+    if (candidateIndex < 0 || candidateIndex >= (NSInteger)_candidates.count) {
+        return nil;
+    }
+
+    return _candidates[candidateIndex];
 }
 
 - (BOOL)isMojaveAndLaterSystem {
@@ -327,8 +643,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
         [self showPreeditString:convertedString];
 
         if (convertedString && convertedString.length > 0) {
-            [sharedCandidates updateCandidates];
-            [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+            [self resetCandidateSelection];
+            [self reloadCandidatePanelForCurrentInput];
         } else {
             [self reset];
         }
@@ -511,6 +827,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 }
 
 - (void)candidateSelectionChanged:(NSAttributedString *)candidateString {
+    [self syncCurrentCandidateIndexWithCandidateString:candidateString.string];
+
     [self _updateComposedBuffer:candidateString];
 
     [self showPreeditString:candidateString.string];

@@ -34,6 +34,12 @@ static IMKCandidatePanelType CandidatePanelTypeForLayout(NSString *layout) {
     return kIMKSingleColumnScrollingCandidatePanel;
 }
 
+static void ApplyCandidatePanelAttributes(void) {
+    [sharedCandidates setAttributes:@{
+        IMKCandidatesSendServerKeyEventFirst : @YES,
+    }];
+}
+
 @interface WebServer ()
 
 @property(nonatomic, strong) GCDWebServer *server;
@@ -115,6 +121,7 @@ static int port = 62718;
                           NSString *candidatePanelLayout = NormalizedCandidatePanelLayout(data[CANDIDATE_PANEL_LAYOUT_KEY]);
                           [preference setObject:candidatePanelLayout forKey:CANDIDATE_PANEL_LAYOUT_KEY];
                           [sharedCandidates setPanelType:CandidatePanelTypeForLayout(candidatePanelLayout)];
+                          ApplyCandidatePanelAttributes();
 
                           NSMutableDictionary *response = [data mutableCopy];
                           response[CANDIDATE_PANEL_LAYOUT_KEY] = candidatePanelLayout;

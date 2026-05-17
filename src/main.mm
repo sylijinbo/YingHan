@@ -110,6 +110,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    [sharedCandidates setAttributes:@{
+        IMKCandidatesSendServerKeyEventFirst : @YES,
+    }];
+
     engine = [ConversionEngine sharedEngine];
 
     [[NSBundle mainBundle] loadNibNamed:@"AnnotationWindow" owner:[NSApplication sharedApplication] topLevelObjects:nil];
