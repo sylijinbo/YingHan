@@ -78,12 +78,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
             break;
         }
 
-        if (_pinyinMode && [self isPinyinChar:event]) {
-            handled = [self onPinyinKeyEvent:event client:sender];
-            break;
-        }
-
-        // ignore Command+X hotkeys.
+        // Let system and app shortcuts such as Command+C/V pass through before
+        // treating their letter key as pinyin input.
         if (modifiers & NSEventModifierFlagCommand)
             break;
 
@@ -93,6 +89,11 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 
         if (modifiers & NSEventModifierFlagControl) {
             return false;
+        }
+
+        if (_pinyinMode && [self isPinyinChar:event]) {
+            handled = [self onPinyinKeyEvent:event client:sender];
+            break;
         }
 
         handled = [self onKeyEvent:event client:sender];
