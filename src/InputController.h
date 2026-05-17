@@ -4,14 +4,19 @@
 #import "AnnotationWinController.h"
 #import "ConversionEngine.h"
 
+typedef NS_ENUM(NSUInteger, YingHanInputMode) {
+    YingHanInputModeEnglish,
+    YingHanInputModePinyin,
+    YingHanInputModeChinese,
+};
+
 @interface InputController : IMKInputController {
     NSMutableString *_composedBuffer;
     NSMutableString *_originalBuffer;
     NSInteger _insertionIndex;
     NSInteger _currentCandidateIndex;
     NSMutableArray *_candidates;
-    BOOL _defaultEnglishMode;
-    BOOL _pinyinMode;
+    YingHanInputMode _inputMode;
     id _currentClient;
     NSUInteger _lastModifiers[2];
     NSEventType _lastEventTypes[2];

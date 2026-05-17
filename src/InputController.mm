@@ -21,6 +21,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 - (void)clickAbout:(NSMenuItem *)sender;
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode;
 - (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode;
+- (void)switchToChineseMode:(id)sender;
+- (void)toggleEnglishPinyinMode:(id)sender;
 
 @end
 
@@ -31,7 +33,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 }
 
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender {
-    NSUInteger modifiers = event.modifierFlags;
+    NSUInteger modifiers = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
     bool handled = NO;
     switch (event.type) {
     case NSEventTypeFlagsChanged:
@@ -41,40 +43,19 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
             return YES;
         }
 
-        // Configured Command key: toggle pinyin mode.
+        // Configured Command key: always switch to Chinese mode.
         if (modifiers == 0 && _lastEventTypes[1] == NSEventTypeFlagsChanged &&
             [self isConfiguredCommandPinyinSwitchKey:event.keyCode]) {
-            _pinyinMode = !_pinyinMode;
-            NSString *bufferedText = [self originalBuffer];
-            if (bufferedText && bufferedText.length > 0) {
-                [self cancelComposition];
-                if (_pinyinMode) {
-                    // committing what was typed so far without space before entering pinyin mode
-                    [self commitCompositionWithoutSpace:sender];
-                } else {
-                    // committing hanzi without space before going back to english mode
-                    [self commitCompositionWithoutSpace:sender];
-                }
-            }
-            [self resetContext];
+            [self switchToChineseMode:sender];
         }
 
         if (modifiers == 0 && _lastEventTypes[1] == NSEventTypeFlagsChanged && _lastModifiers[1] == NSEventModifierFlagShift &&
             [self isConfiguredShiftModeSwitchKey:event.keyCode] && !(_lastModifiers[0] & NSEventModifierFlagShift)) {
-
-            _defaultEnglishMode = !_defaultEnglishMode;
-            if (_defaultEnglishMode) {
-                NSString *bufferedText = [self originalBuffer];
-                if (bufferedText && bufferedText.length > 0) {
-                    [self cancelComposition];
-                    [self commitComposition:sender];
-                }
-                [self resetContext];
-            }
+            [self toggleEnglishPinyinMode:sender];
         }
         break;
     case NSEventTypeKeyDown:
-        if (_defaultEnglishMode) {
+        if (_inputMode == YingHanInputModeEnglish) {
             break;
         }
 
@@ -91,7 +72,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
             return false;
         }
 
-        if (_pinyinMode && [self isPinyinChar:event]) {
+        if (_inputMode == YingHanInputModeChinese && [self isPinyinChar:event]) {
             handled = [self onPinyinKeyEvent:event client:sender];
             break;
         }
@@ -110,23 +91,43 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 }
 
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode {
-    if (keyCode == KEY_LEFT_SHIFT) {
-        return [preference boolForKey:@"enableLeftShiftModeSwitch"];
-    }
-    if (keyCode == KEY_RIGHT_SHIFT) {
-        return [preference boolForKey:@"enableRightShiftModeSwitch"];
-    }
-    return NO;
+    return keyCode == KEY_LEFT_SHIFT || keyCode == KEY_RIGHT_SHIFT;
 }
 
 - (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode {
-    if (keyCode == KEY_LEFT_COMMAND) {
-        return [preference boolForKey:@"enableLeftCommandPinyinSwitch"];
+    return keyCode == KEY_LEFT_COMMAND || keyCode == KEY_RIGHT_COMMAND;
+}
+
+- (void)switchToChineseMode:(id)sender {
+    NSString *bufferedText = [self originalBuffer];
+    if (bufferedText && bufferedText.length > 0) {
+        [self cancelComposition];
+        [self commitCompositionWithoutSpace:sender];
     }
-    if (keyCode == KEY_RIGHT_COMMAND) {
-        return [preference boolForKey:@"enableRightCommandPinyinSwitch"];
+
+    _inputMode = YingHanInputModeChinese;
+    [self resetContext];
+}
+
+- (void)toggleEnglishPinyinMode:(id)sender {
+    NSString *bufferedText = [self originalBuffer];
+    BOOL hasBufferedText = bufferedText && bufferedText.length > 0;
+
+    if (_inputMode == YingHanInputModeEnglish) {
+        if (hasBufferedText) {
+            [self cancelComposition];
+            [self commitCompositionWithoutSpace:sender];
+        }
+        _inputMode = YingHanInputModePinyin;
+    } else {
+        if (hasBufferedText) {
+            [self cancelComposition];
+            [self commitCompositionWithoutSpace:sender];
+        }
+        _inputMode = YingHanInputModeEnglish;
     }
-    return NO;
+
+    [self resetContext];
 }
 
 - (BOOL)isPinyinChar:(NSEvent *)event {
@@ -347,7 +348,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 
     BOOL commitWordWithSpace = [preference boolForKey:@"commitWordWithSpace"];
 
-    if (!_pinyinMode && commitWordWithSpace && text.length > 0) {
+    if (_inputMode != YingHanInputModeChinese && commitWordWithSpace && text.length > 0) {
         char firstChar = [text characterAtIndex:0];
         char lastChar = [text characterAtIndex:text.length - 1];
         if (![[NSCharacterSet decimalDigitCharacterSet] characterIsMember:firstChar] && lastChar != '\'') {
@@ -476,7 +477,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 - (NSArray *)candidates:(id)sender {
     NSString *originalInput = [self originalBuffer];
 
-    if (_pinyinMode) {
+    if (_inputMode == YingHanInputModeChinese) {
         NSArray *hanziList = [engine fetchHanZiByPinyinWithPrefix:originalInput];
         if (hanziList.count == 0) {
             _candidates = [NSMutableArray arrayWithArray:@[ originalInput ]];
