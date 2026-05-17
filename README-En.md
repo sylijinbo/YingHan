@@ -1,12 +1,11 @@
 ![Platform:macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Platform:windows](https://img.shields.io/badge/platform-windows-lightgrey)
 ![Platform:linux](https://img.shields.io/badge/platform-linux-lightgrey)
-![github actions](https://github.com/dongyuwei/hallelujahIM/actions/workflows/github-actions-ci.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
-# hallelujahIM
+# YingHan
 
-hallelujahIM is an english input method with auto-suggestions and spell check features.
+YingHan is an english input method with auto-suggestions and spell check features.
 
 1. The auto-suggestion words are derived from Google's [1/3 million most frequent English words](http://norvig.com/ngrams/count_1w.txt). I have refined this list to 140,402 words, removing nearly all misspelled ones. Candidate words are sorted by frequency.
 2. YingHan also functions as a Spell-Checker: when you input an incorrect word, it will suggest the right alternatives.
@@ -22,15 +21,12 @@ hallelujahIM is an english input method with auto-suggestions and spell check fe
 
 1. download releases
 
-- for **macOS 10.12 ~ 14.2**: https://github.com/dongyuwei/hallelujahIM/releases/latest, download the .pkg installer.
-- for macOS 10.9 ~ 10.11(Deprecated version): https://github.com/dongyuwei/hallelujahIM/releases/tag/v1.1.1, deprecated version, need to install the .app manually.
-- **Windows**: ported to Windows based on PIME，https://github.com/dongyuwei/YingHan-Windows, download the .exe installer.
+- for **macOS 10.12 ~ 14.2**: https://github.com/sylijinbo/YingHan/releases/latest, download the .pkg installer.
+- for macOS 10.9 ~ 10.11(Deprecated version): https://github.com/sylijinbo/YingHan/releases/tag/v1.1.1, deprecated version, need to install the .app manually.
 - Linux：https://github.com/fcitx-contrib/fcitx5-hallelujah, thanks [Qijia Liu](https://github.com/eagleoflqj)！
-- Android: https://github.com/dongyuwei/YingHan-Android
 
 2. unzip the app, copy it to `/Library/Input\ Methods/` or `~/Library/Input\ Methods/`
 3. go to `System Preferences` --> `Input Sources` --> click the + --> select English --> select YingHan
-   ![setup](https://github.com/dongyuwei/NumberInput_IMKit_Sample/blob/master/object-c/hallelujahIM/snapshots/setup.png?raw=true)
 4. switch to YingHan input method
 
 # update/reinstall
@@ -41,14 +37,14 @@ hallelujahIM is an english input method with auto-suggestions and spell check fe
 4. add YingHan to `Input Sources`
 5. switch to YingHan, use it.
 
-# Why it's named hallelujahIM?
+# Why it's named YingHan?
 
 Inspired by [hallelujah_autocompletion](https://daringfireball.net/2006/10/hallelujah_autocompletion).
 
 # preferences setting
 
 click `Preferences...` or visit web ui: http://127.0.0.1:62718/index.html
-![preference](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/preference.png)
+![preference](snapshots/preference.png)
 
 preferences config:<br/>
 <img width="724" height="496" alt="image" src="https://github.com/user-attachments/assets/74e9f7a3-3287-43e5-92f2-08105dc1b461" />
@@ -150,37 +146,29 @@ This input method uses two SQLite databases, queried via FMDB (SQLite wrapper):
 ### snapshots
 
 auto suggestion from local dictionary:<br/>
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions.png)
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions2.png)
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions3.png)
+![auto-suggestion](snapshots/suggestions.png)
+![auto-suggestion](snapshots/suggestions2.png)
+![auto-suggestion](snapshots/suggestions3.png)
 
 Text Expander: <br/>
-![Text Expander](https://github.com/dongyuwei/hallelujahIM/blob/textExpander/snapshots/text_expander1.png)
-![Text Expander](https://github.com/dongyuwei/hallelujahIM/blob/textExpander/snapshots/text_expander2.png)
+![Text Expander](snapshots/text_expander1.png)
+![Text Expander](snapshots/text_expander2.png)
 
 translation(inspired by [MacUIM](https://github.com/uim/uim/wiki/What%27s-uim%3F)):<br/>
-![translation](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/translation.png)
+![translation](snapshots/translation.png)
 
 spell check:<br/>
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check2.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check3.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check4.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check5.png)
+![spell-check](snapshots/check.png)
+![spell-check](snapshots/check2.png)
+![spell-check](snapshots/check3.png)
+![spell-check](snapshots/check4.png)
+![spell-check](snapshots/check5.png)
 
 pinyin in, English out: <br/>
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/gaoji.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/binmayong.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/kexikehe.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/laozi.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/roujiamo.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/xiangbudao.png)
+![pinyin](snapshots/gaoji.png)
+![pinyin](snapshots/binmayong.png)
+![pinyin](snapshots/kexikehe.png)
+![pinyin](snapshots/laozi.png)
+![pinyin](snapshots/roujiamo.png)
+![pinyin](snapshots/xiangbudao.png)
 
-## Paid Support
-
-If functional you need is missing but you're ready to pay for it, feel free to contact me. If not, create an issue anyway, I'll take a look as soon as I can.
-
-### Contact me
-
-- wechat: dongyuwei
-- gmail: newdongyuwei

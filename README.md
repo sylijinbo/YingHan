@@ -1,15 +1,14 @@
 ![Platform:macOS](https://img.shields.io/badge/platform-macOS-blue)
 ![Platform:windows](https://img.shields.io/badge/platform-windows-blue)
 ![Platform:linux](https://img.shields.io/badge/platform-linux-blue)
-![github actions](https://github.com/dongyuwei/hallelujahIM/actions/workflows/github-actions-ci.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
-[![GitHub downloads](https://img.shields.io/github/downloads/dongyuwei/hallelujahIM/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/dongyuwei/hallelujahIM/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/sylijinbo/YingHan/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/sylijinbo/YingHan/releases)
 
 **中文版** | [English Version](README-En.md)
 
-# 哈利路亚英文输入法
+# YingHan 英汉输入法
 
-哈利路亚英文输入法 是 Mac(10.9+ OSX)及 Windows 平台上一款智能英语输入法。其特性如下：
+YingHan 英汉输入法是 Mac(10.9+ OSX)及 Windows 平台上一款智能英语输入法。其特性如下：
 
 1. 离线词库较大较全，词频精准。参见 Google's [1/3 million most frequent English words](http://norvig.com/ngrams/count_1w.txt).
 2. 内置拼写校正功能。不用担心拼写错误，能记住大概字形、发音，本输入法就会自动显示最可能的候选词。
@@ -26,14 +25,12 @@
 
 1. 下载编译好的输入法应用（注意：不要点击 "Clone or download"，要从下面的链接下载 pkg 文件或者 exe 文件）
 
-- macOS 10.12 及以上版本： 下载 **最新版** : https://github.com/dongyuwei/hallelujahIM/releases/latest 下载 pkg 自动安装文件
-- macOS 10.9 ~ 10.11 老版本（Deprecated version）: https://github.com/dongyuwei/hallelujahIM/releases/tag/v1.1.1 需要手动安装 app 文件
-- **Windows 版本**: 基于 PIME 移植到 Windows 平台，https://github.com/dongyuwei/YingHan-Windows 下载 exe 安装文件
+- macOS 10.12 及以上版本： 下载 **最新版** : https://github.com/sylijinbo/YingHan/releases/latest 下载 pkg 自动安装文件
+- macOS 10.9 ~ 10.11 老版本（Deprecated version）: https://github.com/sylijinbo/YingHan/releases/tag/v1.1.1 需要手动安装 app 文件
 - Linux：https://github.com/fcitx-contrib/fcitx5-hallelujah 感谢[Qijia Liu](https://github.com/eagleoflqj)！
-- Android: https://github.com/dongyuwei/YingHan-Android 测试版
 - iOS: https://github.com/my-private-code/Luckey-SimpleKeyboard 测试版
 
-2. 打开下载后的 YingHan .pkg 文件，会自动安装、注册、激活哈利路亚输入法。
+2. 打开下载后的 YingHan .pkg 文件，会自动安装、注册、激活 YingHan 输入法。
 
 > **⚠️ Attention:** Mac系统如果本输入法不能正常使用，请退出当前用户重新登录，在 Input source 中手动删除再重新添加 YingHan 输入法.
 
@@ -47,7 +44,7 @@
 
 注意：因为本程序不是通过 App store 发布的，Macos 会有下面的安全警告。选中 YingHan pkg 安装程序，右键点击 `Open` 来打开，即可开始安装输入法。
 
-![unidentified](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/unidentified.png?raw=true)
+![unidentified](snapshots/unidentified.png)
 
 # 为什么叫 YingHan 这个名字?
 
@@ -60,7 +57,7 @@
 # 偏好设置
 
 点击输入法的 `Preferences` 或者直接访问本地 HTTP 服务: http://127.0.0.1:62718/index.html
-![preference](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/preference.png)
+![preference](snapshots/preference.png)
 
 <img width="724" height="496" alt="image" src="https://github.com/user-attachments/assets/93fa771f-e896-4afc-bb66-50858a596830" />
 
@@ -95,8 +92,6 @@
 
 `bash package/build-package.bash`
 
-## DeepWiki
-https://www.deepwiki.com/dongyuwei/hallelujahIM
 
 ## 开源协议
 
@@ -184,7 +179,7 @@ GPL3(GNU GENERAL PUBLIC LICENSE Version 3)
 5. [talisman](https://github.com/Yomguithereal/talisman)，使用其中的 phonex 算法，实现模糊近似音输入。
 6. [MDCDamerauLevenshtein](https://github.com/modocache/MDCDamerauLevenshtein)，配合 talisman 的 phonex 算法，在音似词中按 Damerau Levenshtein 编辑距离筛选最接近的候选词。
 7. [Google Books Ngram Corpus](https://github.com/nicolas-ivanov/google-books-ngram-frequency)，提供英语 n-gram (2~5 词短语) 频率数据，用于上下文预测功能。
-8. [鼠鬚管 squirrel 输入法](https://github.com/rime/squirrel) 哈利路亚输入法安装包 pkg 的制作 copy/参考了 squirrel 的实现。
+8. [鼠鬚管 squirrel 输入法](https://github.com/rime/squirrel) YingHan 输入法安装包 pkg 的制作 copy/参考了 squirrel 的实现。
 
 ## 贡献代码
 
@@ -192,44 +187,38 @@ GPL3(GNU GENERAL PUBLIC LICENSE Version 3)
 
 ## 问题反馈，意见和建议
 
-请提交问题单到 https://github.com/dongyuwei/hallelujahIM/issues
+请提交问题单到 https://github.com/sylijinbo/YingHan/issues
 
-## 咨询服务
-
-提供输入法功能定制开发。联系方式：
-
-- 微信: dongyuwei
-- gmail: newdongyuwei
 
 ### 一些截图
 
 auto suggestion from local dictionary:<br/>
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions.png)
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions2.png)
-![auto-suggestion](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/suggestions3.png)
+![auto-suggestion](snapshots/suggestions.png)
+![auto-suggestion](snapshots/suggestions2.png)
+![auto-suggestion](snapshots/suggestions3.png)
 
 Text Expander: <br/>
-![Text Expander](https://github.com/dongyuwei/hallelujahIM/blob/textExpander/snapshots/text_expander1.png)
-![Text Expander](https://github.com/dongyuwei/hallelujahIM/blob/textExpander/snapshots/text_expander2.png)
+![Text Expander](snapshots/text_expander1.png)
+![Text Expander](snapshots/text_expander2.png)
 
 translation(inspired by [MacUIM](https://github.com/uim/uim/wiki/What%27s-uim%3F)):<br/>
-![translation](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/translation.png)
+![translation](snapshots/translation.png)
 
 spell check:<br/>
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check2.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check3.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check4.png)
-![spell-check](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/check5.png)
+![spell-check](snapshots/check.png)
+![spell-check](snapshots/check2.png)
+![spell-check](snapshots/check3.png)
+![spell-check](snapshots/check4.png)
+![spell-check](snapshots/check5.png)
 
 pinyin in, English out: <br/>
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/gaoji.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/binmayong.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/kexikehe.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/laozi.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/roujiamo.png)
-![pinyin](https://github.com/dongyuwei/hallelujahIM/blob/master/snapshots/xiangbudao.png)
+![pinyin](snapshots/gaoji.png)
+![pinyin](snapshots/binmayong.png)
+![pinyin](snapshots/kexikehe.png)
+![pinyin](snapshots/laozi.png)
+![pinyin](snapshots/roujiamo.png)
+![pinyin](snapshots/xiangbudao.png)
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=dongyuwei/hallelujahIM&type=Date)](https://star-history.com/#dongyuwei/hallelujahIM&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=sylijinbo/YingHan&type=Date)](https://star-history.com/#sylijinbo/YingHan&Date)

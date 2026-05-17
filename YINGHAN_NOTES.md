@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Status
 
-This local fork is renamed from the upstream `hallelujahIM` project to `YingHan`.
+This local fork is renamed from the upstream `YingHan` project to `YingHan`.
 
 Visible project names are now:
 
