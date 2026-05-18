@@ -15,6 +15,9 @@ typedef NSInteger KeyCode;
 static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC = 53, KEY_ARROW_DOWN = 125, KEY_ARROW_UP = 126,
                      KEY_ARROW_LEFT = 123, KEY_ARROW_RIGHT = 124, KEY_LEFT_SHIFT = 56, KEY_RIGHT_SHIFT = 60, KEY_LEFT_COMMAND = 55,
                      KEY_RIGHT_COMMAND = 54;
+static const KeyCode KEY_1 = 18, KEY_2 = 19, KEY_3 = 20, KEY_4 = 21, KEY_5 = 23, KEY_6 = 22, KEY_7 = 26, KEY_8 = 28, KEY_9 = 25;
+static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KEY_KEYPAD_4 = 86, KEY_KEYPAD_5 = 87,
+                     KEY_KEYPAD_6 = 88, KEY_KEYPAD_7 = 89, KEY_KEYPAD_8 = 91, KEY_KEYPAD_9 = 92;
 
 @interface InputController ()
 
@@ -40,6 +43,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 - (void)selectCandidateAtAbsoluteIndex:(NSInteger)candidateIndex;
 - (NSString *)candidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
 - (NSString *)fallbackCandidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
+- (NSInteger)selectionKeyIndexForEvent:(NSEvent *)event;
 
 @end
 
@@ -333,22 +337,12 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
         return NO;
     }
 
-    NSString *characters = event.characters;
-    if (!characters || characters.length == 0) {
+    NSInteger selectionKeyIndex = [self selectionKeyIndexForEvent:event];
+    if (selectionKeyIndex == NSNotFound) {
         return NO;
     }
 
-    char ch = [characters characterAtIndex:0];
-    if (![[NSCharacterSet decimalDigitCharacterSet] characterIsMember:ch]) {
-        return NO;
-    }
-
-    int pressedNumber = characters.intValue;
-    if (pressedNumber < 1 || pressedNumber > 9) {
-        return NO;
-    }
-
-    NSString *candidate = [self candidateForSelectionKeyIndex:pressedNumber - 1];
+    NSString *candidate = [self candidateForSelectionKeyIndex:selectionKeyIndex];
     if (!candidate) {
         return YES;
     }
@@ -372,29 +366,31 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
         return YES;
     }
 
-    NSInteger currentIndex = [self clampedCurrentCandidateIndex];
-    NSInteger targetIndex = currentIndex + (offset > 0 ? 1 : -1);
-    if (targetIndex < 1) {
-        targetIndex = 1;
-    } else if (targetIndex > (NSInteger)_candidates.count) {
-        targetIndex = _candidates.count;
+    if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:_horizontalPageStartIndex];
+        if (visibleCandidates.count == 0) {
+            return YES;
+        }
+
+        NSInteger selectedLine = _horizontalSelectedLine + (offset > 0 ? 1 : -1);
+        if (selectedLine < 0) {
+            selectedLine = 0;
+        } else if (selectedLine >= (NSInteger)visibleCandidates.count) {
+            selectedLine = visibleCandidates.count - 1;
+        }
+
+        [self showHorizontalCandidatePageStartingAt:_horizontalPageStartIndex selectedLine:selectedLine];
+        return YES;
     }
 
-    NSInteger currentPageStart = ((currentIndex - 1) / 9) * 9 + 1;
-    NSInteger currentPageEnd = MIN(currentPageStart + 8, (NSInteger)_candidates.count);
-    if (targetIndex < currentPageStart) {
-        targetIndex = currentPageStart;
-    } else if (targetIndex > currentPageEnd) {
-        targetIndex = currentPageEnd;
-    }
-
-    if (targetIndex > currentIndex) {
+    if (offset > 0)
         [sharedCandidates moveRight:self];
-    } else if (targetIndex < currentIndex) {
+    else
         [sharedCandidates moveLeft:self];
-    }
 
-    [self updateComposedCandidateAtAbsoluteIndex:targetIndex];
+    NSAttributedString *candidateString = [sharedCandidates selectedCandidateString];
+    if (candidateString.string.length > 0)
+        [self candidateSelectionChanged:candidateString];
     return YES;
 }
 
@@ -403,22 +399,26 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
         return NO;
     }
 
-    NSInteger currentIndex = [self clampedCurrentCandidateIndex];
-    NSInteger currentPageStart = ((currentIndex - 1) / 9) * 9 + 1;
-    NSInteger targetPageStart = currentPageStart + (offset > 0 ? 9 : -9);
-    if (targetPageStart < 1) {
-        targetPageStart = 1;
-    } else if (targetPageStart > (NSInteger)_candidates.count) {
-        targetPageStart = ((NSInteger)(_candidates.count - 1) / 9) * 9 + 1;
+    if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        NSInteger pageStartIndex = _horizontalPageStartIndex + (offset > 0 ? 9 : -9);
+        if (pageStartIndex < 0) {
+            pageStartIndex = 0;
+        } else if (pageStartIndex >= (NSInteger)_candidates.count) {
+            pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
+        }
+
+        [self showHorizontalCandidatePageStartingAt:pageStartIndex selectedLine:_horizontalSelectedLine];
+        return YES;
     }
 
-    NSInteger currentLine = (currentIndex - 1) % 9;
-    NSInteger targetIndex = targetPageStart + currentLine;
-    if (targetIndex > (NSInteger)_candidates.count) {
-        targetIndex = _candidates.count;
-    }
+    if (offset > 0)
+        [sharedCandidates pageDown:self];
+    else
+        [sharedCandidates pageUp:self];
 
-    [self showHorizontalCandidatePageStartingAt:targetPageStart - 1 selectedLine:targetIndex - targetPageStart];
+    NSAttributedString *candidateString = [sharedCandidates selectedCandidateString];
+    if (candidateString.string.length > 0)
+        [self candidateSelectionChanged:candidateString];
     return YES;
 }
 
@@ -480,7 +480,15 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:pageStartIndex];
     if (visibleCandidates.count == 0) {
         [sharedCandidates setCandidateData:@[]];
+        _horizontalPageStartIndex = 0;
+        _horizontalSelectedLine = 0;
         return;
+    }
+
+    if (pageStartIndex < 0) {
+        pageStartIndex = 0;
+    } else if (pageStartIndex >= (NSInteger)_candidates.count) {
+        pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
     }
 
     [sharedCandidates setCandidateData:visibleCandidates];
@@ -495,6 +503,9 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     } else if (selectedLine >= (NSInteger)visibleCandidates.count) {
         selectedLine = visibleCandidates.count - 1;
     }
+
+    _horizontalPageStartIndex = pageStartIndex;
+    _horizontalSelectedLine = selectedLine;
 
     NSInteger candidateIndex = pageStartIndex + selectedLine + 1;
     [self updateComposedCandidateAtAbsoluteIndex:candidateIndex];
@@ -532,6 +543,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 
 - (void)resetCandidateSelection {
     _currentCandidateIndex = 1;
+    _horizontalPageStartIndex = 0;
+    _horizontalSelectedLine = 0;
     [sharedCandidates clearSelection];
 }
 
@@ -580,15 +593,15 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     }
 
     if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
-        NSInteger currentIndex = [self clampedCurrentCandidateIndex];
-        NSInteger pageStartIndex = ((currentIndex - 1) / 9) * 9;
-        NSInteger candidateIndex = pageStartIndex + selectionKeyIndex;
-        if (candidateIndex < 0 || candidateIndex >= (NSInteger)_candidates.count) {
+        NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:_horizontalPageStartIndex];
+        if (selectionKeyIndex >= (NSInteger)visibleCandidates.count) {
             return nil;
         }
 
-        _currentCandidateIndex = candidateIndex + 1;
-        return _candidates[candidateIndex];
+        NSString *candidate = visibleCandidates[selectionKeyIndex];
+        _horizontalSelectedLine = selectionKeyIndex;
+        [self syncCurrentCandidateIndexWithCandidateString:candidate];
+        return candidate;
     }
 
     NSInteger candidateIdentifier = [sharedCandidates candidateIdentifierAtLineNumber:selectionKeyIndex];
@@ -622,6 +635,52 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     }
 
     return _candidates[candidateIndex];
+}
+
+- (NSInteger)selectionKeyIndexForEvent:(NSEvent *)event {
+    NSString *characters = event.charactersIgnoringModifiers;
+    if (!characters || characters.length == 0) {
+        characters = event.characters;
+    }
+
+    if (characters.length > 0) {
+        unichar ch = [characters characterAtIndex:0];
+        if (ch >= '1' && ch <= '9') {
+            return ch - '1';
+        }
+    }
+
+    switch (event.keyCode) {
+    case KEY_1:
+    case KEY_KEYPAD_1:
+        return 0;
+    case KEY_2:
+    case KEY_KEYPAD_2:
+        return 1;
+    case KEY_3:
+    case KEY_KEYPAD_3:
+        return 2;
+    case KEY_4:
+    case KEY_KEYPAD_4:
+        return 3;
+    case KEY_5:
+    case KEY_KEYPAD_5:
+        return 4;
+    case KEY_6:
+    case KEY_KEYPAD_6:
+        return 5;
+    case KEY_7:
+    case KEY_KEYPAD_7:
+        return 6;
+    case KEY_8:
+    case KEY_KEYPAD_8:
+        return 7;
+    case KEY_9:
+    case KEY_KEYPAD_9:
+        return 8;
+    default:
+        return NSNotFound;
+    }
 }
 
 - (BOOL)isMojaveAndLaterSystem {
@@ -696,6 +755,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     [self setOriginalBuffer:@""];
     _insertionIndex = 0;
     _currentCandidateIndex = 1;
+    _horizontalPageStartIndex = 0;
+    _horizontalSelectedLine = 0;
     [sharedCandidates clearSelection];
     [sharedCandidates hide];
     _candidates = [[NSMutableArray alloc] init];
@@ -860,6 +921,8 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
     }
 
     _currentCandidateIndex = 1;
+    _horizontalPageStartIndex = 0;
+    _horizontalSelectedLine = 0;
     _candidates = [[NSMutableArray alloc] init];
     _recentWords = [[NSMutableArray alloc] init];
 }

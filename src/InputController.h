@@ -15,6 +15,8 @@ typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     NSMutableString *_originalBuffer;
     NSInteger _insertionIndex;
     NSInteger _currentCandidateIndex;
+    NSInteger _horizontalPageStartIndex;
+    NSInteger _horizontalSelectedLine;
     NSMutableArray *_candidates;
     YingHanInputMode _inputMode;
     id _currentClient;
