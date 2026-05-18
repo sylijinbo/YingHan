@@ -171,6 +171,15 @@ Horizontal mode notes:
 - Up/down arrows are intended to use InputMethodKit page stepping.
 - The horizontal panel can show fewer than 9 candidates on a page because InputMethodKit decides how many fit in the current panel width. Avoid assuming a fixed 9-candidate page when maintaining selection state.
 
+Current horizontal candidate debugging status:
+
+- The installed app has been verified as `candidatePanelLayout: "horizontal"`.
+- Left/right highlight movement has been partially corrected in recent iterations, but number-key selection is still reported as unresponsive in horizontal mode.
+- Do not keep blind-patching number selection. The next useful debugging step is to add temporary logging around `handleEvent:client:`, the candidate-key entry point, and candidate commit paths to confirm whether digit key events reach `InputController.mm`.
+- Log at least `event.keyCode`, `characters`, `charactersIgnoringModifiers`, candidate panel visibility, current layout, selected visible index, and selected candidate string.
+- If digit key events do not reach the server, investigate `IMKCandidatesSendServerKeyEventFirst`, candidate-panel attributes after every `setPanelType:`, and whether IMK is consuming selection keys before YingHan.
+- If digit key events do reach the server, fix `selectionKeyIndexForEvent:` or the commit path based on the logged values.
+
 Latest local install verification:
 
 ```text
