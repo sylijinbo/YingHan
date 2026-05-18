@@ -195,6 +195,129 @@ These were verified with matching SHA-256 hashes after the latest reinstall. The
 
 ## Notes
 
+## CC-CEDICT Update Strategy
+
+`dictionary/cedict.json` is the source for pinyin-to-Chinese-and-English-definition candidates, such as:
+
+```text
+gaoji -> 高级 / high level / high grade / advanced / high-ranking
+```
+
+When updating CC-CEDICT:
+
+- Update only `dictionary/cedict_1_0_ts_utf-8_mdbg.txt` and the generated `dictionary/cedict.json` unless explicitly requested otherwise.
+- Do not mix this update with `pinyin_data.sqlite3`, Rime dictionaries, Google Pinyin data, English word databases, n-gram data, or candidate panel behavior.
+- Download the latest CC-CEDICT from the MDBG export, generate the new `cedict.json` in a temporary directory, compare counts, and back up the current data before replacing files.
+- The update note must include old/new CC-CEDICT date, old/new `entries`, raw added/removed/changed counts, `cedict.json` key/item count changes, SHA-256 hashes, backup path, and examples of newly added content.
+- Include added-content examples in this format:
+
+```text
+yaoyaoling -> 110 / the emergency number for law enforcement in Mainland China and Taiwan
+sanddayin -> 3D打印 / to 3D print; 3D printing
+bzhan -> B站 / (coll.) Bilibili, Chinese video-sharing website featuring scrolled user comments 弹幕 overlaid on the videos
+```
+
+Fast repeatable update procedure:
+
+1. Download to a temporary directory:
+
+   ```bash
+   rm -rf /private/tmp/yinghan-cedict-update
+   mkdir -p /private/tmp/yinghan-cedict-update
+   curl -L -o /private/tmp/yinghan-cedict-update/cedict_1_0_ts_utf-8_mdbg.txt.gz \
+     https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz
+   gzip -cd /private/tmp/yinghan-cedict-update/cedict_1_0_ts_utf-8_mdbg.txt.gz \
+     > /private/tmp/yinghan-cedict-update/cedict_1_0_ts_utf-8_mdbg.txt
+   ```
+
+2. Generate the candidate JSON without touching project data:
+
+   ```bash
+   cp dictionary/cedict2json.js /private/tmp/yinghan-cedict-update/
+   cp dictionary/google_pinyin_rawdict_utf16_65105_freq.txt /private/tmp/yinghan-cedict-update/
+   cd /private/tmp/yinghan-cedict-update
+   node cedict2json.js
+   ```
+
+3. Compare before replacing:
+
+   - Parse old/new CEDICT by key `traditional|simplified|pinyin`.
+   - Count old/new `entries`, added, removed, changed.
+   - Count old/new `cedict.json` pinyin keys and total candidate/definition items.
+   - Print samples of added, removed, changed entries.
+   - Smoke check `gaoji -> 高级 / high level / high grade / advanced / high-ranking`.
+
+4. Back up current project data:
+
+   ```bash
+   stamp=$(date +%Y%m%d-%H%M%S)
+   backup="dictionary/backups/cedict-$stamp"
+   mkdir -p "$backup"
+   cp dictionary/cedict_1_0_ts_utf-8_mdbg.txt "$backup/"
+   cp dictionary/cedict.json "$backup/"
+   shasum -a 256 "$backup/cedict_1_0_ts_utf-8_mdbg.txt" "$backup/cedict.json" > "$backup/SHA256SUMS.txt"
+   ```
+
+5. Replace only after user confirmation:
+
+   ```bash
+   cp /private/tmp/yinghan-cedict-update/cedict_1_0_ts_utf-8_mdbg.txt dictionary/cedict_1_0_ts_utf-8_mdbg.txt
+   cp /private/tmp/yinghan-cedict-update/cedict.json dictionary/cedict.json
+   ```
+
+6. Rebuild and install:
+
+   ```bash
+   ./script/build_local_clt.sh
+   ./script/install_local_user.sh
+   ```
+
+7. Verify installed resource:
+
+   ```bash
+   shasum -a 256 dictionary/cedict.json \
+     dist/YingHan.app/Contents/Resources/cedict.json \
+     "$HOME/Library/Input Methods/YingHan.app/Contents/Resources/cedict.json"
+   ```
+
+8. Roll back if needed:
+
+   ```bash
+   cp dictionary/backups/cedict-YYYYMMDD-HHMMSS/cedict_1_0_ts_utf-8_mdbg.txt dictionary/
+   cp dictionary/backups/cedict-YYYYMMDD-HHMMSS/cedict.json dictionary/
+   ./script/build_local_clt.sh
+   ./script/install_local_user.sh
+   ```
+
+Latest CC-CEDICT update:
+
+- Updated on: 2026-05-17
+- Source: MDBG CC-CEDICT export, `https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz`
+- Old version: `2017-11-17T23:06:02Z`, `entries=115687`, CC BY-SA 3.0 header
+- New version: `2026-05-17T09:29:34Z`, `entries=124927`, CC BY-SA 4.0 header
+- Raw diff from the update report: `+17474` added, `-8234` removed, `18719` changed
+- Generated `cedict.json`: `110249 -> 116406` pinyin keys, `580471 -> 602017` candidate/definition items
+- Current SHA-256:
+  - `dictionary/cedict_1_0_ts_utf-8_mdbg.txt`: `8025825b8b5a8c9e8d450c4c4d6ade939d6c41ce877204f639f9660ef03178a3`
+  - `dictionary/cedict.json`: `23d6126a010a3871129b788ef41b80ce4fbd1fd5b87e93ae25f9213222627b73`
+- Rollback backup: `dictionary/backups/cedict-20260517-222615`
+- Smoke check:
+
+```text
+gaoji -> 高级 / high level / high grade / advanced / high-ranking
+ceshi -> 测试
+```
+
+Examples of newly added content from the 2026 update:
+
+```text
+yaoyaoling -> 110 / the emergency number for law enforcement in Mainland China and Taiwan
+sanddayin -> 3D打印 / to 3D print; 3D printing
+bzhan -> B站 / (coll.) Bilibili, Chinese video-sharing website featuring scrolled user comments 弹幕 overlaid on the videos
+jiujiuliu -> 996 / 9am-9pm, six days a week (work schedule)
+cpzhi -> CP值 / value for money; bang for your buck
+```
+
 CocoaPods generated support files may still contain upstream names such as `Pods-hallelujah`. Those are generated dependency integration names and are currently left in place to avoid breaking the existing CocoaPods project wiring.
 
 The repository-level validation rule is still:
