@@ -3,6 +3,7 @@
 
 #import "AnnotationWinController.h"
 #import "ConversionEngine.h"
+#import "HorizontalCandidateWindowController.h"
 
 typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     YingHanInputModeEnglish,
@@ -23,6 +24,7 @@ typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     NSUInteger _lastModifiers[2];
     NSEventType _lastEventTypes[2];
     AnnotationWinController *_annotationWin;
+    HorizontalCandidateWindowController *_horizontalCandidateWin;
     NSMutableArray<NSString *> *_recentWords;
 }
 

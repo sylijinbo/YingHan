@@ -33,6 +33,7 @@
 		F102C5A61F487DE80005B03F /* words_with_frequency_and_translation_and_ipa.sqlite3 in Resources */ = {isa = PBXBuildFile; fileRef = F102C5A51F487DE80005B03F /* words_with_frequency_and_translation_and_ipa.sqlite3 */; };
 		F102C5AA1F4882C80005B03F /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = F102C5A91F4882C80005B03F /* main.mm */; };
 		F102C5AC1F4882D30005B03F /* InputController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F102C5AB1F4882D30005B03F /* InputController.mm */; };
+		F105C0012F00000000000001 /* HorizontalCandidateWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = F105C0002F00000000000001 /* HorizontalCandidateWindowController.m */; };
 		F109B4911E1A83AF00AA7A41 /* AnnotationWinController.m in Sources */ = {isa = PBXBuildFile; fileRef = F109B48F1E1A83AF00AA7A41 /* AnnotationWinController.m */; };
 		F1BF613D22D4DF6F003B946F /* AnnotationWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = F1BF613B22D4DF6F003B946F /* AnnotationWindow.xib */; };
 /* End PBXBuildFile section */
@@ -87,6 +88,8 @@
 		F102C5A51F487DE80005B03F /* words_with_frequency_and_translation_and_ipa.sqlite3 */ = {isa = PBXFileReference; lastKnownFileType = file; name = words_with_frequency_and_translation_and_ipa.sqlite3; path = dictionary/words_with_frequency_and_translation_and_ipa.sqlite3; sourceTree = "<group>"; };
 		F102C5A91F4882C80005B03F /* main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = main.mm; path = src/main.mm; sourceTree = "<group>"; };
 		F102C5AB1F4882D30005B03F /* InputController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = InputController.mm; path = src/InputController.mm; sourceTree = "<group>"; };
+		F105C0002F00000000000001 /* HorizontalCandidateWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = HorizontalCandidateWindowController.m; path = src/HorizontalCandidateWindowController.m; sourceTree = "<group>"; };
+		F105C0002F00000000000002 /* HorizontalCandidateWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HorizontalCandidateWindowController.h; path = src/HorizontalCandidateWindowController.h; sourceTree = "<group>"; };
 		F109B48F1E1A83AF00AA7A41 /* AnnotationWinController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AnnotationWinController.m; path = src/AnnotationWinController.m; sourceTree = "<group>"; };
 		F109B4901E1A83AF00AA7A41 /* AnnotationWinController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AnnotationWinController.h; path = src/AnnotationWinController.h; sourceTree = "<group>"; };
 		F1BF613C22D4DF6F003B946F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/AnnotationWindow.xib; sourceTree = "<group>"; };
@@ -131,6 +134,8 @@
 				F102C5A91F4882C80005B03F /* main.mm */,
 				F1CDA2A41B55180A005086C6 /* InputController.h */,
 				F102C5AB1F4882D30005B03F /* InputController.mm */,
+				F105C0002F00000000000002 /* HorizontalCandidateWindowController.h */,
+				F105C0002F00000000000001 /* HorizontalCandidateWindowController.m */,
 				F109B4901E1A83AF00AA7A41 /* AnnotationWinController.h */,
 				F109B48F1E1A83AF00AA7A41 /* AnnotationWinController.m */,
 				3804D23620F2FC2A00CF1BD9 /* NSScreen+PointConversion.h */,
@@ -449,6 +454,7 @@
 				3804D23720F2FC2A00CF1BD9 /* NSScreen+PointConversion.m in Sources */,
 				389468D61F57C8CE00EF1F5E /* InputApplicationDelegate.m in Sources */,
 				F102C5AC1F4882D30005B03F /* InputController.mm in Sources */,
+				F105C0012F00000000000001 /* HorizontalCandidateWindowController.m in Sources */,
 				F109B4911E1A83AF00AA7A41 /* AnnotationWinController.m in Sources */,
 				381CD8C622C60D610098764F /* WebServer.m in Sources */,
 				386E1C0022DC5E9C000C6DCF /* ConversionEngine.mm in Sources */,

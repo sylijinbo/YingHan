@@ -1,6 +1,6 @@
 # YingHan Local Build Notes
 
-Last updated: 2026-05-17
+Last updated: 2026-05-19
 
 ## Current Status
 
@@ -59,6 +59,16 @@ The GitHub Actions workflow file is not uploaded because the available GitHub to
 ## Local Build
 
 This project can be built with Command Line Tools only. Full Xcode is not required for the local build path.
+
+For the current local machine, skip the project-mandated validation commands during rapid local iteration unless the user explicitly asks for them:
+
+```bash
+sh format-code.sh
+sh unit-tests.sh
+bash build.sh
+```
+
+They are known to fail here because `clang-format` / `brew` are missing and `xcodebuild` is pointed at Command Line Tools rather than full Xcode. Use the CLT build script below for practical local verification.
 
 Build the app:
 
@@ -168,17 +178,22 @@ Horizontal mode notes:
 - The marked text above the candidate panel should continue to show the raw input letters, such as `d`, `de`, or `xiang`, while candidate highlight movement updates the internal selected candidate for commit.
 - Number keys `1` through `9` should select the candidate shown at the matching visible screen position.
 - Left/right arrows are intended to move the visible highlight by one candidate.
-- Up/down arrows are intended to use InputMethodKit page stepping.
-- The horizontal panel can show fewer than 9 candidates on a page because InputMethodKit decides how many fit in the current panel width. Avoid assuming a fixed 9-candidate page when maintaining selection state.
+- Up/down arrows and the right-side page buttons page the custom horizontal candidate window.
+- `-` is the horizontal shortcut for previous page / moveUp direction.
+- `=` is the horizontal shortcut for next page / moveDown direction.
+- The horizontal panel can show fewer than 9 candidates on a page because the custom window dynamically decides how many candidate cells fit in the current width. Avoid assuming a fixed 9-candidate page when maintaining selection state.
+- Tried but rejected: giving the full `_candidates` array directly to `setCandidateData:` in horizontal mode so IMK can own all paging. In local testing this made number-key selection unresponsive, so do not reuse this approach.
+- Current direction: horizontal mode now uses a custom AppKit candidate window (`HorizontalCandidateWindowController`) so YingHan can draw `1...9`, page buttons, mouse selection, highlight movement, and paging itself. Keep vertical mode on the native IMK panel.
 
-Current horizontal candidate debugging status:
+Current horizontal candidate implementation status:
 
 - The installed app has been verified as `candidatePanelLayout: "horizontal"`.
-- Left/right highlight movement has been partially corrected in recent iterations, but number-key selection is still reported as unresponsive in horizontal mode.
-- Do not keep blind-patching number selection. The next useful debugging step is to add temporary logging around `handleEvent:client:`, the candidate-key entry point, and candidate commit paths to confirm whether digit key events reach `InputController.mm`.
-- Log at least `event.keyCode`, `characters`, `charactersIgnoringModifiers`, candidate panel visibility, current layout, selected visible index, and selected candidate string.
-- If digit key events do not reach the server, investigate `IMKCandidatesSendServerKeyEventFirst`, candidate-panel attributes after every `setPanelType:`, and whether IMK is consuming selection keys before YingHan.
-- If digit key events do reach the server, fix `selectionKeyIndexForEvent:` or the commit path based on the logged values.
+- Horizontal mode uses a custom AppKit candidate window rather than relying on IMK's native horizontal panel for visible paging.
+- Page size is dynamic: usually up to 9 candidates, but fewer when candidate text is long.
+- Visible candidate numbering resets per page and digit keys commit the current visible item with the matching number.
+- Candidate display keeps the visible space between the number and candidate text, such as `1 从而`; do not remove that space. If spacing looks too wide, adjust only cell padding / cell width calculation, not the candidate string or commit logic.
+- English commit spacing is controlled by `commitWordWithSpace`; do not change it while adjusting candidate-window display spacing.
+- The last verified local install used matching dist/installed SHA-256 `63f7067b45861f0fe752b7e2fdb85b53515433c03efe59fadb00adee8372b3ba`.
 
 Latest local install verification:
 

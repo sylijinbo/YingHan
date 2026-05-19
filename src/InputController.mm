@@ -19,7 +19,7 @@ static const KeyCode KEY_1 = 18, KEY_2 = 19, KEY_3 = 20, KEY_4 = 21, KEY_5 = 23,
 static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KEY_KEYPAD_4 = 86, KEY_KEYPAD_5 = 87,
                      KEY_KEYPAD_6 = 88, KEY_KEYPAD_7 = 89, KEY_KEYPAD_8 = 91, KEY_KEYPAD_9 = 92;
 
-@interface InputController ()
+@interface InputController () <HorizontalCandidateWindowControllerDelegate>
 
 - (void)showIMEPreferences:(id)sender;
 - (void)clickAbout:(NSMenuItem *)sender;
@@ -28,11 +28,13 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (void)switchToChineseMode:(id)sender;
 - (void)toggleEnglishPinyinMode:(id)sender;
 - (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender;
+- (BOOL)isHorizontalCandidateWindowVisible;
 - (BOOL)moveVisibleCandidateHighlightByOffset:(NSInteger)offset;
 - (BOOL)pageVisibleCandidatesByOffset:(NSInteger)offset;
 - (NSInteger)currentVisibleCandidateLine;
 - (void)reloadCandidatePanelForCurrentInput;
 - (NSArray *)visibleCandidatesForPageStartIndex:(NSInteger)pageStartIndex;
+- (NSInteger)previousHorizontalPageStartIndexBefore:(NSInteger)pageStartIndex;
 - (void)showHorizontalCandidatePageStartingAt:(NSInteger)pageStartIndex selectedLine:(NSInteger)selectedLine;
 - (BOOL)syncCurrentCandidateIndexWithIMKSelection;
 - (void)syncCurrentCandidateIndexWithCandidateString:(NSString *)candidate;
@@ -44,6 +46,8 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (NSString *)candidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
 - (NSString *)fallbackCandidateForSelectionKeyIndex:(NSInteger)selectionKeyIndex;
 - (NSInteger)selectionKeyIndexForEvent:(NSEvent *)event;
+- (NSPoint)candidateWindowTopLeftPointForWidth:(CGFloat)width height:(CGFloat)height;
+- (void)commitCandidateAtVisibleLine:(NSInteger)line client:(id)sender;
 
 @end
 
@@ -303,7 +307,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender {
-    if (![sharedCandidates isVisible]) {
+    if (![sharedCandidates isVisible] && ![self isHorizontalCandidateWindowVisible]) {
         return NO;
     }
 
@@ -316,6 +320,19 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     NSInteger keyCode = event.keyCode;
 
     if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
+        NSString *characters = event.charactersIgnoringModifiers;
+        if (!characters || characters.length == 0) {
+            characters = event.characters;
+        }
+
+        if ([characters isEqualToString:@"-"]) {
+            return [self pageVisibleCandidatesByOffset:-1];
+        }
+
+        if ([characters isEqualToString:@"="]) {
+            return [self pageVisibleCandidatesByOffset:1];
+        }
+
         if (keyCode == KEY_ARROW_LEFT) {
             return [self moveVisibleCandidateHighlightByOffset:-1];
         }
@@ -358,8 +375,13 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     return YES;
 }
 
+- (BOOL)isHorizontalCandidateWindowVisible {
+    return [sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel && _horizontalCandidateWin &&
+           [_horizontalCandidateWin isVisible];
+}
+
 - (BOOL)moveVisibleCandidateHighlightByOffset:(NSInteger)offset {
-    if (![sharedCandidates isVisible] || _candidates.count == 0) {
+    if ((![sharedCandidates isVisible] && ![self isHorizontalCandidateWindowVisible]) || _candidates.count == 0) {
         return NO;
     }
     if (offset == 0) {
@@ -395,19 +417,23 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (BOOL)pageVisibleCandidatesByOffset:(NSInteger)offset {
-    if (![sharedCandidates isVisible] || _candidates.count == 0) {
+    if ((![sharedCandidates isVisible] && ![self isHorizontalCandidateWindowVisible]) || _candidates.count == 0) {
         return NO;
     }
 
     if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
-        NSInteger pageStartIndex = _horizontalPageStartIndex + (offset > 0 ? 9 : -9);
-        if (pageStartIndex < 0) {
-            pageStartIndex = 0;
-        } else if (pageStartIndex >= (NSInteger)_candidates.count) {
-            pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
+        NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:_horizontalPageStartIndex];
+        NSInteger pageStartIndex = _horizontalPageStartIndex;
+        if (offset > 0) {
+            pageStartIndex += MAX(1, (NSInteger)visibleCandidates.count);
+            if (pageStartIndex >= (NSInteger)_candidates.count) {
+                pageStartIndex = _horizontalPageStartIndex;
+            }
+        } else {
+            pageStartIndex = [self previousHorizontalPageStartIndexBefore:_horizontalPageStartIndex];
         }
 
-        [self showHorizontalCandidatePageStartingAt:pageStartIndex selectedLine:_horizontalSelectedLine];
+        [self showHorizontalCandidatePageStartingAt:pageStartIndex selectedLine:0];
         return YES;
     }
 
@@ -453,10 +479,11 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     if ([sharedCandidates panelType] == kIMKSingleRowSteppingCandidatePanel) {
         [self candidates:self];
         [self showHorizontalCandidatePageStartingAt:0 selectedLine:0];
-        [sharedCandidates show:kIMKLocateCandidatesBelowHint];
+        [sharedCandidates hide];
         return;
     }
 
+    [_horizontalCandidateWin hideWindow];
     [sharedCandidates updateCandidates];
     [sharedCandidates show:kIMKLocateCandidatesBelowHint];
 }
@@ -466,31 +493,69 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         return @[];
     }
 
+    if (!_horizontalCandidateWin) {
+        _horizontalCandidateWin = [HorizontalCandidateWindowController sharedController];
+        _horizontalCandidateWin.delegate = self;
+    }
+
     if (pageStartIndex < 0) {
         pageStartIndex = 0;
     } else if (pageStartIndex >= (NSInteger)_candidates.count) {
-        pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
+        pageStartIndex = _candidates.count - 1;
     }
 
-    NSInteger candidateCount = MIN(9, (NSInteger)_candidates.count - pageStartIndex);
+    NSInteger candidateCount = [_horizontalCandidateWin visibleCandidateCountForCandidates:_candidates pageStart:pageStartIndex];
+    candidateCount = MIN(candidateCount, (NSInteger)_candidates.count - pageStartIndex);
     return [_candidates subarrayWithRange:NSMakeRange(pageStartIndex, candidateCount)];
 }
 
+- (NSInteger)previousHorizontalPageStartIndexBefore:(NSInteger)pageStartIndex {
+    if (_candidates.count == 0 || pageStartIndex <= 0) {
+        return 0;
+    }
+
+    if (!_horizontalCandidateWin) {
+        _horizontalCandidateWin = [HorizontalCandidateWindowController sharedController];
+        _horizontalCandidateWin.delegate = self;
+    }
+
+    NSInteger targetEndIndex = MIN(pageStartIndex, (NSInteger)_candidates.count);
+    NSInteger previousStart = 0;
+    NSInteger currentStart = 0;
+    while (currentStart < targetEndIndex) {
+        previousStart = currentStart;
+        NSInteger candidateCount = [_horizontalCandidateWin visibleCandidateCountForCandidates:_candidates pageStart:currentStart];
+        NSInteger nextStart = currentStart + MAX(1, candidateCount);
+        if (nextStart >= targetEndIndex) {
+            return previousStart;
+        }
+        currentStart = nextStart;
+    }
+    return previousStart;
+}
+
 - (void)showHorizontalCandidatePageStartingAt:(NSInteger)pageStartIndex selectedLine:(NSInteger)selectedLine {
+    if (!_horizontalCandidateWin) {
+        _horizontalCandidateWin = [HorizontalCandidateWindowController sharedController];
+        _horizontalCandidateWin.delegate = self;
+    }
+
+    if (pageStartIndex < 0) {
+        pageStartIndex = 0;
+    } else if (pageStartIndex >= (NSInteger)_candidates.count) {
+        pageStartIndex = _candidates.count - 1;
+    }
+
     NSArray *visibleCandidates = [self visibleCandidatesForPageStartIndex:pageStartIndex];
     if (visibleCandidates.count == 0) {
         [sharedCandidates setCandidateData:@[]];
+        [_horizontalCandidateWin hideWindow];
         _horizontalPageStartIndex = 0;
         _horizontalSelectedLine = 0;
         return;
     }
 
-    if (pageStartIndex < 0) {
-        pageStartIndex = 0;
-    } else if (pageStartIndex >= (NSInteger)_candidates.count) {
-        pageStartIndex = ((NSInteger)(_candidates.count - 1) / 9) * 9;
-    }
-
+    [sharedCandidates hide];
     [sharedCandidates setCandidateData:visibleCandidates];
     [sharedCandidates clearSelection];
 
@@ -510,9 +575,16 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     NSInteger candidateIndex = pageStartIndex + selectedLine + 1;
     [self updateComposedCandidateAtAbsoluteIndex:candidateIndex];
 
-    for (NSInteger i = 0; i < selectedLine; i++) {
-        [sharedCandidates moveRight:self];
-    }
+    BOOL hasPreviousPage = pageStartIndex > 0;
+    BOOL hasNextPage = pageStartIndex + (NSInteger)visibleCandidates.count < (NSInteger)_candidates.count;
+    NSPoint topLeftPoint = [self candidateWindowTopLeftPointForWidth:_horizontalCandidateWin.candidateWindowWidth
+                                                              height:_horizontalCandidateWin.candidateWindowHeight];
+    [_horizontalCandidateWin showCandidates:visibleCandidates
+                                  pageStart:pageStartIndex
+                                selectedLine:selectedLine
+                              hasPreviousPage:hasPreviousPage
+                                  hasNextPage:hasNextPage
+                                    topLeftAt:topLeftPoint];
 }
 
 - (BOOL)syncCurrentCandidateIndexWithIMKSelection {
@@ -637,6 +709,52 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     return _candidates[candidateIndex];
 }
 
+- (void)horizontalCandidateWindow:(HorizontalCandidateWindowController *)window didSelectCandidateAtLine:(NSInteger)line {
+    [self commitCandidateAtVisibleLine:line client:_currentClient];
+}
+
+- (void)horizontalCandidateWindow:(HorizontalCandidateWindowController *)window didRequestPageOffset:(NSInteger)offset {
+    [self pageVisibleCandidatesByOffset:offset];
+}
+
+- (void)commitCandidateAtVisibleLine:(NSInteger)line client:(id)sender {
+    NSString *candidate = [self candidateForSelectionKeyIndex:line];
+    if (!candidate) {
+        return;
+    }
+
+    [self cancelComposition];
+    [self setComposedBuffer:candidate];
+    [self setOriginalBuffer:candidate];
+    if (_inputMode == YingHanInputModeChinese) {
+        [self commitCompositionWithoutSpace:sender];
+    } else {
+        [self commitComposition:sender];
+    }
+}
+
+- (NSPoint)candidateWindowTopLeftPointForWidth:(CGFloat)width height:(CGFloat)height {
+    NSRect lineRect = NSZeroRect;
+    [_currentClient attributesForCharacterIndex:0 lineHeightRectangle:&lineRect];
+
+    NSScreen *screen = [NSScreen currentScreenForMouseLocation];
+    NSRect screenFrame = screen.frame;
+    CGFloat x = NSMinX(lineRect);
+    CGFloat y = NSMinY(lineRect) - 6.0;
+
+    if (x + width > NSMaxX(screenFrame) - 8.0) {
+        x = NSMaxX(screenFrame) - width - 8.0;
+    }
+    if (x < NSMinX(screenFrame) + 8.0) {
+        x = NSMinX(screenFrame) + 8.0;
+    }
+    if (y - height < NSMinY(screenFrame) + 8.0) {
+        y = NSMaxY(lineRect) + height + 6.0;
+    }
+
+    return NSMakePoint(x, y);
+}
+
 - (NSInteger)selectionKeyIndexForEvent:(NSEvent *)event {
     NSString *characters = event.charactersIgnoringModifiers;
     if (!characters || characters.length == 0) {
@@ -759,6 +877,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     _horizontalSelectedLine = 0;
     [sharedCandidates clearSelection];
     [sharedCandidates hide];
+    [_horizontalCandidateWin hideWindow];
     _candidates = [[NSMutableArray alloc] init];
     [sharedCandidates setCandidateData:@[]];
     [_annotationWin setAnnotation:@""];
@@ -918,6 +1037,10 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
     if (_annotationWin == nil) {
         _annotationWin = [AnnotationWinController sharedController];
+    }
+    if (_horizontalCandidateWin == nil) {
+        _horizontalCandidateWin = [HorizontalCandidateWindowController sharedController];
+        _horizontalCandidateWin.delegate = self;
     }
 
     _currentCandidateIndex = 1;
