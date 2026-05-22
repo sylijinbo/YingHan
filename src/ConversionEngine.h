@@ -15,6 +15,11 @@
 - (NSArray *)sortByDamerauLevenshteinDistance:(NSArray *)original inputText:(NSString *)text;
 - (NSArray *)getSuggestionOfSpellChecker:(NSString *)buffer;
 - (NSArray *)getCandidates:(NSString *)originalInput;
+- (NSArray *)applyUserLearningToCandidates:(NSArray *)candidates inputKey:(NSString *)inputKey mode:(NSString *)mode;
+- (void)recordUserLearningWithInputKey:(NSString *)inputKey
+                              candidate:(NSString *)candidate
+                                  mode:(NSString *)mode
+                         candidateList:(NSArray *)candidateList;
 - (NSArray *)predictNextWordsForContext:(NSString *)context maxResults:(NSInteger)max;
 - (NSArray *)predictNextWordsForContext:(NSString *)context prefixFilter:(NSString *)prefix maxResults:(NSInteger)max;
 - (NSArray *)fetchHanZiByPinyinWithPrefix:(NSString *)prefix;

@@ -48,6 +48,9 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (NSInteger)selectionKeyIndexForEvent:(NSEvent *)event;
 - (NSPoint)candidateWindowTopLeftPointForWidth:(CGFloat)width height:(CGFloat)height;
 - (void)commitCandidateAtVisibleLine:(NSInteger)line client:(id)sender;
+- (void)commitSelectedCandidate:(NSString *)candidate client:(id)sender;
+- (NSString *)userLearningModeIdentifier;
+- (void)recordUserLearningForSelectedCandidate:(NSString *)candidate inputKey:(NSString *)inputKey;
 
 @end
 
@@ -226,10 +229,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
             if (!candidate) {
                 return YES;
             }
-            [self cancelComposition];
-            [self setComposedBuffer:candidate];
-            [self setOriginalBuffer:candidate];
-            [self commitCompositionWithoutSpace:sender];
+            [self commitSelectedCandidate:candidate client:sender];
             return YES;
         }
     }
@@ -364,14 +364,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         return YES;
     }
 
-    [self cancelComposition];
-    [self setComposedBuffer:candidate];
-    [self setOriginalBuffer:candidate];
-    if (_inputMode == YingHanInputModeChinese) {
-        [self commitCompositionWithoutSpace:sender];
-    } else {
-        [self commitComposition:sender];
-    }
+    [self commitSelectedCandidate:candidate client:sender];
     return YES;
 }
 
@@ -723,14 +716,35 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         return;
     }
 
+    [self commitSelectedCandidate:candidate client:sender];
+}
+
+- (void)commitSelectedCandidate:(NSString *)candidate client:(id)sender {
+    NSString *inputKey = [[self originalBuffer] copy];
+    [self recordUserLearningForSelectedCandidate:candidate inputKey:inputKey];
+    _suppressUserLearningForCurrentCommit = YES;
     [self cancelComposition];
     [self setComposedBuffer:candidate];
-    [self setOriginalBuffer:candidate];
     if (_inputMode == YingHanInputModeChinese) {
         [self commitCompositionWithoutSpace:sender];
     } else {
         [self commitComposition:sender];
     }
+}
+
+- (NSString *)userLearningModeIdentifier {
+    return _inputMode == YingHanInputModeChinese ? @"chinese" : @"english";
+}
+
+- (void)recordUserLearningForSelectedCandidate:(NSString *)candidate inputKey:(NSString *)inputKey {
+    if (!candidate || candidate.length == 0 || !inputKey || inputKey.length == 0) {
+        return;
+    }
+
+    [engine recordUserLearningWithInputKey:inputKey
+                                 candidate:candidate
+                                     mode:[self userLearningModeIdentifier]
+                            candidateList:_candidates];
 }
 
 - (NSPoint)candidateWindowTopLeftPointForWidth:(CGFloat)width height:(CGFloat)height {
@@ -837,6 +851,10 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         text = [self originalBuffer];
     }
 
+    if (!_suppressUserLearningForCurrentCommit) {
+        [self recordUserLearningForSelectedCandidate:text inputKey:[self originalBuffer]];
+    }
+    _suppressUserLearningForCurrentCommit = NO;
     [self recordCommittedWord:text];
 
     BOOL commitWordWithSpace = [preference boolForKey:@"commitWordWithSpace"];
@@ -861,6 +879,10 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         text = [self originalBuffer];
     }
 
+    if (!_suppressUserLearningForCurrentCommit) {
+        [self recordUserLearningForSelectedCandidate:text inputKey:[self originalBuffer]];
+    }
+    _suppressUserLearningForCurrentCommit = NO;
     [self recordCommittedWord:text];
 
     [sender insertText:text replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
@@ -875,6 +897,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     _currentCandidateIndex = 1;
     _horizontalPageStartIndex = 0;
     _horizontalSelectedLine = 0;
+    _suppressUserLearningForCurrentCommit = NO;
     [sharedCandidates clearSelection];
     [sharedCandidates hide];
     [_horizontalCandidateWin hideWindow];
@@ -979,8 +1002,9 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
             _candidates = [NSMutableArray arrayWithArray:@[ originalInput ]];
             return @[ originalInput ];
         }
-        _candidates = [NSMutableArray arrayWithArray:hanziList];
-        return hanziList;
+        NSArray *rankedHanziList = [engine applyUserLearningToCandidates:hanziList inputKey:originalInput mode:@"chinese"];
+        _candidates = [NSMutableArray arrayWithArray:rankedHanziList];
+        return rankedHanziList;
     }
 
     NSArray *candidateList = [engine getCandidates:originalInput];
@@ -997,13 +1021,15 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
                     [blended addObject:word];
                 }
             }
-            _candidates = [NSMutableArray arrayWithArray:blended];
-            return blended;
+            NSArray *rankedBlended = [engine applyUserLearningToCandidates:blended inputKey:originalInput mode:@"english"];
+            _candidates = [NSMutableArray arrayWithArray:rankedBlended];
+            return rankedBlended;
         }
     }
 
-    _candidates = [NSMutableArray arrayWithArray:candidateList];
-    return candidateList;
+    NSArray *rankedCandidateList = [engine applyUserLearningToCandidates:candidateList inputKey:originalInput mode:@"english"];
+    _candidates = [NSMutableArray arrayWithArray:rankedCandidateList];
+    return rankedCandidateList;
 }
 
 - (void)candidateSelectionChanged:(NSAttributedString *)candidateString {

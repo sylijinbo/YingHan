@@ -26,6 +26,7 @@ typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     AnnotationWinController *_annotationWin;
     HorizontalCandidateWindowController *_horizontalCandidateWin;
     NSMutableArray<NSString *> *_recentWords;
+    BOOL _suppressUserLearningForCurrentCommit;
 }
 
 - (NSMutableString *)composedBuffer;
