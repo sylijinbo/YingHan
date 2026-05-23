@@ -236,6 +236,56 @@ These were verified with matching SHA-256 hashes after the latest reinstall. The
 
 ## Notes
 
+## rime-ice Pinyin Data Update Strategy
+
+`dictionary/pinyin_data.sqlite3` is generated from the full rime-ice Chinese dictionaries. The same update also creates `dictionary/rime_ice_frequency.json`, which `dictionary/cedict2json.js` uses to sort CC-CEDICT candidates.
+
+Fast repeatable update procedure:
+
+```bash
+sh dictionary/update_rime_ice.sh
+node dictionary/cedict2json.js
+./script/build_local_clt.sh
+./script/install_local_user.sh
+/usr/bin/open -n "$HOME/Library/Input Methods/YingHan.app"
+```
+
+`dictionary/update_rime_ice.sh` reuses the cached rime-ice source in `~/Library/Caches/YingHan/rime-ice/source` by default. To fetch a new upstream version, run:
+
+```bash
+sh dictionary/update_rime_ice.sh --refresh
+```
+
+The rime-ice update imports:
+
+- `cn_dicts/8105.dict.yaml`
+- `cn_dicts/41448.dict.yaml`
+- `cn_dicts/base.dict.yaml`
+- `cn_dicts/ext.dict.yaml`
+- `cn_dicts/tencent.dict.yaml`
+- `cn_dicts/others.dict.yaml`
+- inline entries from `rime_ice.dict.yaml`
+
+To keep the installed app size under control, generation prunes entries longer than four Hanzi when their rime-ice frequency is `<= 20`. This keeps the common and high-confidence rime-ice data while removing very long, low-frequency terms that dominate SQLite size.
+
+The update script writes `dictionary/rime_ice_update.json` with source commit, imported files, row counts, file sizes, hashes, and smoke-test samples. It backs up current generated data under `dictionary/backups/rime-ice-YYYYMMDD-HHMMSS/` before replacing files.
+
+After local install, verify resources with:
+
+```bash
+shasum -a 256 dictionary/pinyin_data.sqlite3 \
+  dist/YingHan.app/Contents/Resources/pinyin_data.sqlite3 \
+  "$HOME/Library/Input Methods/YingHan.app/Contents/Resources/pinyin_data.sqlite3" \
+  "$HOME/Library/Application Support/YingHan/pinyin_data.sqlite3"
+
+shasum -a 256 dictionary/cedict.json \
+  dist/YingHan.app/Contents/Resources/cedict.json \
+  "$HOME/Library/Input Methods/YingHan.app/Contents/Resources/cedict.json"
+
+pgrep -fl YingHan
+curl -sS http://127.0.0.1:62718/preference
+```
+
 ## CC-CEDICT Update Strategy
 
 `dictionary/cedict.json` is the source for pinyin-to-Chinese-and-English-definition candidates, such as:
@@ -247,9 +297,10 @@ gaoji -> 高级 / high level / high grade / advanced / high-ranking
 When updating CC-CEDICT:
 
 - Update only `dictionary/cedict_1_0_ts_utf-8_mdbg.txt` and the generated `dictionary/cedict.json` unless explicitly requested otherwise.
-- Do not mix this update with `pinyin_data.sqlite3`, Rime dictionaries, Google Pinyin data, English word databases, n-gram data, or candidate panel behavior.
+- Do not mix this update with `pinyin_data.sqlite3`, rime-ice dictionary updates, English word databases, n-gram data, or candidate panel behavior.
 - Download the latest CC-CEDICT from the MDBG export, generate the new `cedict.json` in a temporary directory, compare counts, and back up the current data before replacing files.
 - The update note must include old/new CC-CEDICT date, old/new `entries`, raw added/removed/changed counts, `cedict.json` key/item count changes, SHA-256 hashes, backup path, and examples of newly added content.
+- `dictionary/cedict2json.js` uses `dictionary/rime_ice_frequency.json` for candidate ordering. Regenerate rime-ice data first if the frequency file is missing or stale.
 - Include added-content examples in this format:
 
 ```text
@@ -275,7 +326,7 @@ Fast repeatable update procedure:
 
    ```bash
    cp dictionary/cedict2json.js /private/tmp/yinghan-cedict-update/
-   cp dictionary/google_pinyin_rawdict_utf16_65105_freq.txt /private/tmp/yinghan-cedict-update/
+   cp dictionary/rime_ice_frequency.json /private/tmp/yinghan-cedict-update/
    cd /private/tmp/yinghan-cedict-update
    node cedict2json.js
    ```

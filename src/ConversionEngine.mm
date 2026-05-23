@@ -478,20 +478,79 @@ NSDictionary *deserializeJSON(NSString *path) {
         return @[];
 
     NSString *lowerPrefix = prefix.lowercaseString;
+    unichar lastChar = [lowerPrefix characterAtIndex:lowerPrefix.length - 1];
+    NSString *upperPrefix =
+        [NSString stringWithFormat:@"%@%C", [lowerPrefix substringToIndex:lowerPrefix.length - 1], (unichar)(lastChar + 1)];
     __block NSMutableArray *results = [NSMutableArray array];
 
     [_pyDbQueue inDatabase:^(FMDatabase *db) {
-        NSString *sql = @"SELECT hz FROM pinyin_data WHERE py LIKE ? OR abbr LIKE ? "
-                        @"ORDER BY CASE WHEN py = ? OR abbr = ? THEN 0 ELSE 1 END, freq DESC LIMIT 20";
-        NSString *pattern = [NSString stringWithFormat:@"%@%%", lowerPrefix];
-        FMResultSet *rs = [db executeQuery:sql, pattern, pattern, lowerPrefix, lowerPrefix];
+        NSInteger fetchLimit = 40;
+        NSString *exactPinyinSql = @"SELECT hz FROM pinyin_data WHERE py = ? ORDER BY freq DESC LIMIT ?";
+        FMResultSet *exactRs = [db executeQuery:exactPinyinSql, lowerPrefix, @(fetchLimit)];
+        while ([exactRs next]) {
+            NSString *hz = [exactRs stringForColumn:@"hz"];
+            if (hz && hz.length > 0 && ![results containsObject:hz]) {
+                [results addObject:hz];
+            }
+            if (results.count >= 20) {
+                break;
+            }
+        }
+        [exactRs close];
+
+        if (results.count >= 20) {
+            return;
+        }
+
+        NSString *exactAbbrSql = @"SELECT hz FROM pinyin_data WHERE abbr = ? ORDER BY freq DESC LIMIT ?";
+        NSInteger remaining = 20 - results.count;
+        FMResultSet *exactAbbrRs = [db executeQuery:exactAbbrSql, lowerPrefix, @(MAX(fetchLimit, remaining))];
+        while ([exactAbbrRs next]) {
+            NSString *hz = [exactAbbrRs stringForColumn:@"hz"];
+            if (hz && hz.length > 0 && ![results containsObject:hz]) {
+                [results addObject:hz];
+            }
+            if (results.count >= 20) {
+                break;
+            }
+        }
+        [exactAbbrRs close];
+
+        if (results.count >= 20) {
+            return;
+        }
+
+        NSString *sql = @"SELECT hz FROM pinyin_data WHERE py >= ? AND py < ? AND py <> ? ORDER BY freq DESC LIMIT ?";
+        remaining = 20 - results.count;
+        FMResultSet *rs = [db executeQuery:sql, lowerPrefix, upperPrefix, lowerPrefix, @(MAX(fetchLimit, remaining))];
         while ([rs next]) {
             NSString *hz = [rs stringForColumn:@"hz"];
             if (hz && hz.length > 0 && ![results containsObject:hz]) {
                 [results addObject:hz];
             }
+            if (results.count >= 20) {
+                break;
+            }
         }
         [rs close];
+
+        if (results.count >= 20) {
+            return;
+        }
+
+        NSString *abbrSql = @"SELECT hz FROM pinyin_data WHERE abbr >= ? AND abbr < ? AND abbr <> ? ORDER BY freq DESC LIMIT ?";
+        remaining = 20 - results.count;
+        FMResultSet *abbrRs = [db executeQuery:abbrSql, lowerPrefix, upperPrefix, lowerPrefix, @(MAX(fetchLimit, remaining))];
+        while ([abbrRs next]) {
+            NSString *hz = [abbrRs stringForColumn:@"hz"];
+            if (hz && hz.length > 0 && ![results containsObject:hz]) {
+                [results addObject:hz];
+            }
+            if (results.count >= 20) {
+                break;
+            }
+        }
+        [abbrRs close];
     }];
 
     return [results copy];

@@ -1,0 +1,54 @@
+{
+  "build": {
+    "char_reading_count": 40596,
+    "inferred_count": 273,
+    "skipped_count": 0,
+    "source_counts": {
+      "cn_dicts/41448.dict.yaml": 30551,
+      "cn_dicts/8105.dict.yaml": 8399,
+      "cn_dicts/base.dict.yaml": 542556,
+      "cn_dicts/ext.dict.yaml": 339117,
+      "cn_dicts/others.dict.yaml": 883,
+      "cn_dicts/tencent.dict.yaml": 981634,
+      "rime_ice.dict.yaml": 1
+    }
+  },
+  "frequency": {
+    "bytes": 29871057,
+    "entries": 1567421,
+    "sha256": "e49c854418a8856696b50dc0b1a99254a969c63c765ab81b6ad49ebdd6a7a3d8"
+  },
+  "import_files": [
+    "cn_dicts/8105.dict.yaml",
+    "cn_dicts/41448.dict.yaml",
+    "cn_dicts/base.dict.yaml",
+    "cn_dicts/ext.dict.yaml",
+    "cn_dicts/tencent.dict.yaml",
+    "cn_dicts/others.dict.yaml",
+    "rime_ice.dict.yaml"
+  ],
+  "pruning": {
+    "kept_entries": 1574248,
+    "max_low_frequency": 20.0,
+    "min_low_frequency_length": 4,
+    "original_entries": 1894540,
+    "pruned_entries": 320292
+  },
+  "samples": {
+    "3D打印": 1.0,
+    "中国": 505879.0,
+    "你好": 332885.0,
+    "测试": 500807.0,
+    "软件": 502289.0
+  },
+  "source": "https://github.com/iDvel/rime-ice",
+  "source_commit": "785489b3220dfca98d7ce632e590f416faea4fdf",
+  "source_ref": "main",
+  "sqlite": {
+    "bytes": 102543360,
+    "distinct_hz": 1567421,
+    "distinct_py": 741095,
+    "rows": 1574248,
+    "sha256": "1e5420af9c8020a00eac6006a2ff20e3413efb7877b1a875a837cc53d733a53b"
+  }
+}

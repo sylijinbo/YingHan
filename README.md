@@ -135,7 +135,7 @@ GPL3(GNU GENERAL PUBLIC LICENSE Version 3)
    ```
 
 2. **拼音数据库**: `~/Library/Application Support/YingHan/pinyin_data.sqlite3`
-   - 包含约 55,320 条拼音→汉字映射，基于 Google 拼音词库
+   - 包含基于 [rime-ice](https://github.com/iDvel/rime-ice) 全量中文词库生成的拼音→汉字映射
    - 通过右 Command 键切换到拼音输入模式
    - 支持完整拼音和首字母缩写两种输入方式
    - 候选项按词频排序
@@ -151,8 +151,8 @@ GPL3(GNU GENERAL PUBLIC LICENSE Version 3)
        abbr TEXT NOT NULL,    -- 拼音首字母缩写
        freq REAL NOT NULL     -- 词频
    );
-   CREATE INDEX idx_pinyin ON pinyin_data(py);
-   CREATE INDEX idx_abbr ON pinyin_data(abbr);
+   CREATE INDEX idx_pinyin_freq ON pinyin_data(py, freq DESC);
+   CREATE INDEX idx_abbr_freq ON pinyin_data(abbr, freq DESC);
    ```
 
 3. **自定义替换数据库**: `~/Library/Application Support/YingHan/substitutions.sqlite3`
@@ -173,7 +173,7 @@ GPL3(GNU GENERAL PUBLIC LICENSE Version 3)
 
 1. [FMDB](https://github.com/ccgus/fmdb)，SQLite 数据库封装库，用于高效的前缀匹配查询。
 2. dictionary/cedict.json is transformed from [cc-cedict](https://cc-cedict.org/wiki/)，拼音-英语词库。
-3. dictionary/pinyin_data.sqlite3 基于 Google 拼音词库 (65,105 条原始数据)，拼音-汉字映射。
+3. dictionary/pinyin_data.sqlite3 基于 [rime-ice](https://github.com/iDvel/rime-ice) 全量中文词库生成，拼音-汉字映射。
 4. [cmudict](http://www.speech.cs.cmu.edu/cgi-bin/cmudict) and https://github.com/mphilli/English-to-IPA， 国际音标。
 4. [GCDWebServer](https://github.com/swisspol/GCDWebServer)，用于用户使用偏好配置。
 5. [talisman](https://github.com/Yomguithereal/talisman)，使用其中的 phonex 算法，实现模糊近似音输入。

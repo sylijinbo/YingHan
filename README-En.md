@@ -97,7 +97,7 @@ This input method uses two SQLite databases, queried via FMDB (SQLite wrapper):
    ```
 
 2. **Pinyin database**: `~/Library/Application Support/YingHan/pinyin_data.sqlite3`
-   - Contains ~55,320 pinyin→hanzi mappings based on the Google Pinyin dictionary
+   - Contains pinyin→hanzi mappings generated from the full [rime-ice](https://github.com/iDvel/rime-ice) Chinese dictionaries
    - Switch to pinyin mode via right Command key
    - Supports both full pinyin and initial-letter abbreviations
    - Results ranked by frequency
@@ -113,8 +113,8 @@ This input method uses two SQLite databases, queried via FMDB (SQLite wrapper):
        abbr TEXT NOT NULL,    -- Pinyin initial abbreviation
        freq REAL NOT NULL     -- Frequency score
    );
-   CREATE INDEX idx_pinyin ON pinyin_data(py);
-   CREATE INDEX idx_abbr ON pinyin_data(abbr);
+   CREATE INDEX idx_pinyin_freq ON pinyin_data(py, freq DESC);
+   CREATE INDEX idx_abbr_freq ON pinyin_data(abbr, freq DESC);
    ```
 
 3. **Substitutions database**: `~/Library/Application Support/YingHan/substitutions.sqlite3`
@@ -135,7 +135,7 @@ This input method uses two SQLite databases, queried via FMDB (SQLite wrapper):
 
 1. [FMDB](https://github.com/ccgus/fmdb), SQLite wrapper for efficient prefix matching queries.
 2. dictionary/cedict.json is transformed from [cc-cedict](https://cc-cedict.org/wiki/)
-3. dictionary/pinyin_data.sqlite3 derived from Google Pinyin raw dict (65,105 entries), pinyin→hanzi mappings.
+3. dictionary/pinyin_data.sqlite3 is generated from the full [rime-ice](https://github.com/iDvel/rime-ice) Chinese dictionaries, pinyin→hanzi mappings.
 4. [cmudict](http://www.speech.cs.cmu.edu/cgi-bin/cmudict) and https://github.com/mphilli/English-to-IPA
 4. [GCDWebServer](https://github.com/swisspol/GCDWebServer)
 5. [talisman](https://github.com/Yomguithereal/talisman), using its phonex algorithm to implement fuzzy phonics match.
@@ -171,4 +171,3 @@ pinyin in, English out: <br/>
 ![pinyin](snapshots/laozi.png)
 ![pinyin](snapshots/roujiamo.png)
 ![pinyin](snapshots/xiangbudao.png)
-
