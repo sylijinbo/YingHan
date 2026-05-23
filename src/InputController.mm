@@ -51,6 +51,8 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (void)commitSelectedCandidate:(NSString *)candidate client:(id)sender;
 - (NSString *)userLearningModeIdentifier;
 - (void)recordUserLearningForSelectedCandidate:(NSString *)candidate inputKey:(NSString *)inputKey;
+- (BOOL)replaceAutoSpaceBeforePunctuationForEvent:(NSEvent *)event client:(id)sender;
+- (BOOL)isAutoSpaceReplacementPunctuation:(NSString *)characters;
 
 @end
 
@@ -106,6 +108,11 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
             break;
         }
 
+        if ([self replaceAutoSpaceBeforePunctuationForEvent:event client:sender]) {
+            handled = YES;
+            break;
+        }
+
         if (_inputMode == YingHanInputModeEnglish) {
             break;
         }
@@ -137,6 +144,8 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (void)switchToChineseMode:(id)sender {
+    _canReplaceAutoSpaceWithPunctuation = NO;
+
     NSString *bufferedText = [self originalBuffer];
     if (bufferedText && bufferedText.length > 0) {
         [self cancelComposition];
@@ -148,6 +157,8 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (void)toggleEnglishPinyinMode:(id)sender {
+    _canReplaceAutoSpaceWithPunctuation = NO;
+
     NSString *bufferedText = [self originalBuffer];
     BOOL hasBufferedText = bufferedText && bufferedText.length > 0;
 
@@ -185,6 +196,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     bool hasBufferedText = bufferedText && bufferedText.length > 0;
 
     if (keyCode == KEY_DELETE) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         if (hasBufferedText) {
             return [self deleteBackward:sender];
         }
@@ -192,6 +204,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_SPACE) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         if (hasBufferedText) {
             [self commitCompositionWithoutSpace:sender];
             return YES;
@@ -200,6 +213,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_RETURN) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         if (hasBufferedText) {
             [self commitCompositionWithoutSpace:sender];
             return YES;
@@ -208,6 +222,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_ESC) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         [self cancelComposition];
         [self reset];
         [self resetContext];
@@ -254,6 +269,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_SPACE) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         if (hasBufferedText) {
             [self commitComposition:sender];
             return YES;
@@ -262,6 +278,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_RETURN) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         if (hasBufferedText) {
             [self commitCompositionWithoutSpace:sender];
             return YES;
@@ -270,6 +287,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     if (keyCode == KEY_ESC) {
+        _canReplaceAutoSpaceWithPunctuation = NO;
         [self cancelComposition];
         [sender insertText:@""];
         [self reset];
@@ -304,6 +322,49 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     return NO;
+}
+
+- (BOOL)replaceAutoSpaceBeforePunctuationForEvent:(NSEvent *)event client:(id)sender {
+    if (!_canReplaceAutoSpaceWithPunctuation) {
+        return NO;
+    }
+
+    _canReplaceAutoSpaceWithPunctuation = NO;
+
+    if (_inputMode == YingHanInputModeChinese || ![preference boolForKey:@"commitWordWithSpace"]) {
+        return NO;
+    }
+
+    NSString *bufferedText = [self originalBuffer];
+    if (bufferedText && bufferedText.length > 0) {
+        return NO;
+    }
+
+    NSString *characters = event.characters;
+    if (![self isAutoSpaceReplacementPunctuation:characters]) {
+        return NO;
+    }
+
+    if (![sender respondsToSelector:@selector(selectedRange)]) {
+        return NO;
+    }
+
+    NSRange selectedRange = [sender selectedRange];
+    if (selectedRange.location == NSNotFound || selectedRange.location == 0 || selectedRange.length > 0) {
+        return NO;
+    }
+
+    [sender insertText:characters replacementRange:NSMakeRange(selectedRange.location - 1, 1)];
+    return YES;
+}
+
+- (BOOL)isAutoSpaceReplacementPunctuation:(NSString *)characters {
+    if (!characters || characters.length != 1) {
+        return NO;
+    }
+
+    unichar ch = [characters characterAtIndex:0];
+    return ch == '.' || ch == ',' || ch == '!' || ch == '?' || ch == ';' || ch == ':';
 }
 
 - (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender {
@@ -858,18 +919,21 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     [self recordCommittedWord:text];
 
     BOOL commitWordWithSpace = [preference boolForKey:@"commitWordWithSpace"];
+    BOOL addedAutoSpace = NO;
 
     if (_inputMode != YingHanInputModeChinese && commitWordWithSpace && text.length > 0) {
         char firstChar = [text characterAtIndex:0];
         char lastChar = [text characterAtIndex:text.length - 1];
         if (![[NSCharacterSet decimalDigitCharacterSet] characterIsMember:firstChar] && lastChar != '\'') {
             text = [NSString stringWithFormat:@"%@ ", text];
+            addedAutoSpace = YES;
         }
     }
 
     [sender insertText:text replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
 
     [self reset];
+    _canReplaceAutoSpaceWithPunctuation = addedAutoSpace;
 }
 
 - (void)commitCompositionWithoutSpace:(id)sender {
@@ -888,6 +952,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     [sender insertText:text replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
 
     [self reset];
+    _canReplaceAutoSpaceWithPunctuation = NO;
 }
 
 - (void)reset {
@@ -1077,6 +1142,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (void)deactivateServer:(id)sender {
+    _canReplaceAutoSpaceWithPunctuation = NO;
     [self reset];
     [self resetContext];
 }

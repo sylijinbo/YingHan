@@ -27,6 +27,7 @@ typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     HorizontalCandidateWindowController *_horizontalCandidateWin;
     NSMutableArray<NSString *> *_recentWords;
     BOOL _suppressUserLearningForCurrentCommit;
+    BOOL _canReplaceAutoSpaceWithPunctuation;
 }
 
 - (NSMutableString *)composedBuffer;
