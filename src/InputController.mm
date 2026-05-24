@@ -23,6 +23,8 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
 - (void)showIMEPreferences:(id)sender;
 - (void)clickAbout:(NSMenuItem *)sender;
+- (NSUInteger)normalizedModifiersForEvent:(NSEvent *)event;
+- (BOOL)isCapsLockEnabledForEvent:(NSEvent *)event;
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode;
 - (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode;
 - (void)switchToChineseMode:(id)sender;
@@ -63,7 +65,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 }
 
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender {
-    NSUInteger modifiers = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+    NSUInteger modifiers = [self normalizedModifiersForEvent:event];
     bool handled = NO;
     switch (event.type) {
     case NSEventTypeFlagsChanged:
@@ -114,10 +116,15 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         }
 
         if (_inputMode == YingHanInputModeEnglish) {
-            break;
+            _inputMode = YingHanInputModePinyin;
         }
 
         if (_inputMode == YingHanInputModeChinese && [self isPinyinChar:event]) {
+            NSString *bufferedText = [self originalBuffer];
+            if ([self isCapsLockEnabledForEvent:event] && (!bufferedText || bufferedText.length == 0)) {
+                handled = NO;
+                break;
+            }
             handled = [self onPinyinKeyEvent:event client:sender];
             break;
         }
@@ -133,6 +140,14 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     _lastModifiers[1] = modifiers;
     _lastEventTypes[1] = event.type;
     return handled;
+}
+
+- (NSUInteger)normalizedModifiersForEvent:(NSEvent *)event {
+    return (event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) & ~NSEventModifierFlagCapsLock;
+}
+
+- (BOOL)isCapsLockEnabledForEvent:(NSEvent *)event {
+    return (event.modifierFlags & NSEventModifierFlagCapsLock) != 0;
 }
 
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode {
@@ -162,19 +177,11 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     NSString *bufferedText = [self originalBuffer];
     BOOL hasBufferedText = bufferedText && bufferedText.length > 0;
 
-    if (_inputMode == YingHanInputModeEnglish) {
-        if (hasBufferedText) {
-            [self cancelComposition];
-            [self commitCompositionWithoutSpace:sender];
-        }
-        _inputMode = YingHanInputModePinyin;
-    } else {
-        if (hasBufferedText) {
-            [self cancelComposition];
-            [self commitCompositionWithoutSpace:sender];
-        }
-        _inputMode = YingHanInputModeEnglish;
+    if (hasBufferedText) {
+        [self cancelComposition];
+        [self commitCompositionWithoutSpace:sender];
     }
+    _inputMode = YingHanInputModePinyin;
 
     [self resetContext];
 }
@@ -1139,6 +1146,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     _horizontalSelectedLine = 0;
     _candidates = [[NSMutableArray alloc] init];
     _recentWords = [[NSMutableArray alloc] init];
+    _inputMode = YingHanInputModePinyin;
 }
 
 - (void)deactivateServer:(id)sender {
