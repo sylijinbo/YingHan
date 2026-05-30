@@ -14,7 +14,7 @@ var app = new Vue({
       enableLeftShiftModeSwitch: false,
       enableRightShiftModeSwitch: true,
       enableLeftCommandPinyinSwitch: false,
-      enableRightCommandPinyinSwitch: true
+      enableRightCommandPinyinSwitch: false
     },
     substitutions: {}
   },

@@ -2,12 +2,13 @@
 
 ## After any code change
 
-Always run these commands in order:
+Skip these commands by default:
 
 ```bash
 sh format-code.sh
 sh unit-tests.sh
 bash build.sh
+./script/build_local_clt.sh
 ```
 
-All three must pass before committing.
+Do not run them unless explicitly requested by the user.

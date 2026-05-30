@@ -13,8 +13,7 @@ extern ConversionEngine *engine;
 
 typedef NSInteger KeyCode;
 static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC = 53, KEY_ARROW_DOWN = 125, KEY_ARROW_UP = 126,
-                     KEY_ARROW_LEFT = 123, KEY_ARROW_RIGHT = 124, KEY_LEFT_SHIFT = 56, KEY_RIGHT_SHIFT = 60, KEY_LEFT_COMMAND = 55,
-                     KEY_RIGHT_COMMAND = 54;
+                     KEY_ARROW_LEFT = 123, KEY_ARROW_RIGHT = 124, KEY_LEFT_SHIFT = 56, KEY_RIGHT_SHIFT = 60;
 static const KeyCode KEY_1 = 18, KEY_2 = 19, KEY_3 = 20, KEY_4 = 21, KEY_5 = 23, KEY_6 = 22, KEY_7 = 26, KEY_8 = 28, KEY_9 = 25;
 static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KEY_KEYPAD_4 = 86, KEY_KEYPAD_5 = 87,
                      KEY_KEYPAD_6 = 88, KEY_KEYPAD_7 = 89, KEY_KEYPAD_8 = 91, KEY_KEYPAD_9 = 92;
@@ -26,7 +25,6 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (NSUInteger)normalizedModifiersForEvent:(NSEvent *)event;
 - (BOOL)isCapsLockEnabledForEvent:(NSEvent *)event;
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode;
-- (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode;
 - (BOOL)handleFlagsChangedEvent:(NSEvent *)event client:(id)sender;
 - (void)switchToChineseMode:(id)sender;
 - (void)toggleEnglishPinyinMode:(id)sender;
@@ -56,6 +54,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (void)recordUserLearningForSelectedCandidate:(NSString *)candidate inputKey:(NSString *)inputKey;
 - (BOOL)replaceAutoSpaceBeforePunctuationForEvent:(NSEvent *)event client:(id)sender;
 - (BOOL)isAutoSpaceReplacementPunctuation:(NSString *)characters;
+- (NSString *)chinesePunctuationForCharacters:(NSString *)characters;
 
 @end
 
@@ -139,18 +138,6 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (BOOL)handleFlagsChangedEvent:(NSEvent *)event client:(id)sender {
     NSUInteger modifiers = [self normalizedModifiersForEvent:event];
 
-    // Configured Command key: always switch to Chinese mode.
-    if ([self isConfiguredCommandPinyinSwitchKey:event.keyCode]) {
-        if (modifiers & NSEventModifierFlagCommand) {
-            if ((modifiers & (NSEventModifierFlagShift | NSEventModifierFlagControl | NSEventModifierFlagOption)) == 0) {
-                [self switchToChineseMode:sender];
-            }
-            return YES;
-        }
-
-        return YES;
-    }
-
     if ([self isConfiguredShiftModeSwitchKey:event.keyCode]) {
         if (modifiers & NSEventModifierFlagShift) {
             if ((modifiers & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption)) == 0) {
@@ -174,10 +161,6 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode {
     return keyCode == KEY_LEFT_SHIFT || keyCode == KEY_RIGHT_SHIFT;
-}
-
-- (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode {
-    return keyCode == KEY_LEFT_COMMAND || keyCode == KEY_RIGHT_COMMAND;
 }
 
 - (void)switchToChineseMode:(id)sender {
@@ -205,7 +188,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         [self cancelComposition];
         [self commitCompositionWithoutSpace:sender];
     }
-    _inputMode = YingHanInputModePinyin;
+    _inputMode = _inputMode == YingHanInputModeChinese ? YingHanInputModePinyin : YingHanInputModeChinese;
 
     [self resetContext];
 }
@@ -344,6 +327,18 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         }
     }
 
+    NSString *chinesePunctuation = [self chinesePunctuationForCharacters:characters];
+    if (_inputMode == YingHanInputModeChinese && chinesePunctuation) {
+        if (hasBufferedText) {
+            [self appendToComposedBuffer:chinesePunctuation];
+            [self commitCompositionWithoutSpace:sender];
+            return YES;
+        }
+
+        [sender insertText:chinesePunctuation replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+        return YES;
+    }
+
     if ([[NSCharacterSet punctuationCharacterSet] characterIsMember:ch] || [[NSCharacterSet symbolCharacterSet] characterIsMember:ch]) {
         if (hasBufferedText) {
             [self appendToComposedBuffer:characters];
@@ -396,6 +391,52 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
     unichar ch = [characters characterAtIndex:0];
     return ch == '.' || ch == ',' || ch == '!' || ch == '?' || ch == ';' || ch == ':';
+}
+
+- (NSString *)chinesePunctuationForCharacters:(NSString *)characters {
+    if (!characters || characters.length != 1) {
+        return nil;
+    }
+
+    unichar ch = [characters characterAtIndex:0];
+    switch (ch) {
+    case ',':
+        return @"，";
+    case '.':
+        return @"。";
+    case '?':
+        return @"？";
+    case '!':
+        return @"！";
+    case ';':
+        return @"；";
+    case ':':
+        return @"：";
+    case '(':
+        return @"（";
+    case ')':
+        return @"）";
+    case '[':
+        return @"【";
+    case ']':
+        return @"】";
+    case '{':
+        return @"『";
+    case '}':
+        return @"』";
+    case '"':
+        return @"“";
+    case '\'':
+        return @"‘";
+    case '<':
+        return @"《";
+    case '>':
+        return @"》";
+    case '\\':
+        return @"、";
+    default:
+        return nil;
+    }
 }
 
 - (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender {

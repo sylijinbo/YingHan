@@ -77,7 +77,7 @@ void initPreference() {
         @"enableLeftShiftModeSwitch" : @NO,
         @"enableRightShiftModeSwitch" : @YES,
         @"enableLeftCommandPinyinSwitch" : @NO,
-        @"enableRightCommandPinyinSwitch" : @YES,
+        @"enableRightCommandPinyinSwitch" : @NO,
         kCandidatePanelLayoutKey : kCandidatePanelLayoutVertical,
     };
     [preference registerDefaults:defaultPrefs];

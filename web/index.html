@@ -43,17 +43,6 @@
             <input type="checkbox" v-model="preference.enableRightShiftModeSwitch" />
           </label>
         </fieldset>
-        <fieldset>
-          <legend>English / pinyin Chinese switch</legend>
-          <label>
-            Left Command:
-            <input type="checkbox" v-model="preference.enableLeftCommandPinyinSwitch" />
-          </label>
-          <label>
-            Right Command:
-            <input type="checkbox" v-model="preference.enableRightCommandPinyinSwitch" />
-          </label>
-        </fieldset>
         <button :disabled="loading">
           {{ loading ? "loading..." : "Save" }}
         </button>
