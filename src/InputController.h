@@ -6,7 +6,7 @@
 #import "HorizontalCandidateWindowController.h"
 
 typedef NS_ENUM(NSUInteger, YingHanInputMode) {
-    YingHanInputModeEnglish,
+    // YingHanInputModeEnglish,
     YingHanInputModePinyin,
     YingHanInputModeChinese,
 };
@@ -21,13 +21,13 @@ typedef NS_ENUM(NSUInteger, YingHanInputMode) {
     NSMutableArray *_candidates;
     YingHanInputMode _inputMode;
     id _currentClient;
-    NSUInteger _lastModifiers[2];
-    NSEventType _lastEventTypes[2];
     AnnotationWinController *_annotationWin;
     HorizontalCandidateWindowController *_horizontalCandidateWin;
     NSMutableArray<NSString *> *_recentWords;
     BOOL _suppressUserLearningForCurrentCommit;
     BOOL _canReplaceAutoSpaceWithPunctuation;
+    BOOL _shiftSwitchCandidateActive;
+    NSInteger _shiftSwitchCandidateKeyCode;
 }
 
 - (NSMutableString *)composedBuffer;

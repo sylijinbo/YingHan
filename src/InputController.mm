@@ -27,6 +27,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 - (BOOL)isCapsLockEnabledForEvent:(NSEvent *)event;
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode;
 - (BOOL)isConfiguredCommandPinyinSwitchKey:(KeyCode)keyCode;
+- (BOOL)handleFlagsChangedEvent:(NSEvent *)event client:(id)sender;
 - (void)switchToChineseMode:(id)sender;
 - (void)toggleEnglishPinyinMode:(id)sender;
 - (BOOL)handleCandidateKeyEvent:(NSEvent *)event client:(id)sender;
@@ -69,24 +70,13 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     bool handled = NO;
     switch (event.type) {
     case NSEventTypeFlagsChanged:
-        // NSLog(@"YingHan event modifierFlags %lu, event keyCode: %@", (unsigned long)[event modifierFlags], [event keyCode]);
-
-        if (_lastEventTypes[1] == NSEventTypeFlagsChanged && _lastModifiers[1] == modifiers) {
-            return YES;
-        }
-
-        // Configured Command key: always switch to Chinese mode.
-        if (modifiers == 0 && _lastEventTypes[1] == NSEventTypeFlagsChanged &&
-            [self isConfiguredCommandPinyinSwitchKey:event.keyCode]) {
-            [self switchToChineseMode:sender];
-        }
-
-        if (modifiers == 0 && _lastEventTypes[1] == NSEventTypeFlagsChanged && _lastModifiers[1] == NSEventModifierFlagShift &&
-            [self isConfiguredShiftModeSwitchKey:event.keyCode] && !(_lastModifiers[0] & NSEventModifierFlagShift)) {
-            [self toggleEnglishPinyinMode:sender];
-        }
+        handled = [self handleFlagsChangedEvent:event client:sender];
         break;
     case NSEventTypeKeyDown:
+        if (modifiers & NSEventModifierFlagShift) {
+            _shiftSwitchCandidateActive = NO;
+        }
+
         // Let system and app shortcuts such as Command+C/V pass through before
         // treating their letter key as pinyin input.
         if (modifiers & NSEventModifierFlagCommand)
@@ -115,10 +105,6 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
             break;
         }
 
-        if (_inputMode == YingHanInputModeEnglish) {
-            _inputMode = YingHanInputModePinyin;
-        }
-
         if (_inputMode == YingHanInputModeChinese && [self isPinyinChar:event]) {
             NSString *bufferedText = [self originalBuffer];
             if ([self isCapsLockEnabledForEvent:event] && (!bufferedText || bufferedText.length == 0)) {
@@ -135,11 +121,11 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         break;
     }
 
-    _lastModifiers[0] = _lastModifiers[1];
-    _lastEventTypes[0] = _lastEventTypes[1];
-    _lastModifiers[1] = modifiers;
-    _lastEventTypes[1] = event.type;
     return handled;
+}
+
+- (void)flagsChanged:(NSEvent *)event client:(id)sender {
+    [self handleFlagsChangedEvent:event client:sender];
 }
 
 - (NSUInteger)normalizedModifiersForEvent:(NSEvent *)event {
@@ -148,6 +134,42 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
 - (BOOL)isCapsLockEnabledForEvent:(NSEvent *)event {
     return (event.modifierFlags & NSEventModifierFlagCapsLock) != 0;
+}
+
+- (BOOL)handleFlagsChangedEvent:(NSEvent *)event client:(id)sender {
+    NSUInteger modifiers = [self normalizedModifiersForEvent:event];
+
+    // Configured Command key: always switch to Chinese mode.
+    if ([self isConfiguredCommandPinyinSwitchKey:event.keyCode]) {
+        if (modifiers & NSEventModifierFlagCommand) {
+            if ((modifiers & (NSEventModifierFlagShift | NSEventModifierFlagControl | NSEventModifierFlagOption)) == 0) {
+                [self switchToChineseMode:sender];
+            }
+            return YES;
+        }
+
+        return YES;
+    }
+
+    if ([self isConfiguredShiftModeSwitchKey:event.keyCode]) {
+        if (modifiers & NSEventModifierFlagShift) {
+            if ((modifiers & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption)) == 0) {
+                _shiftSwitchCandidateActive = YES;
+                _shiftSwitchCandidateKeyCode = event.keyCode;
+            } else {
+                _shiftSwitchCandidateActive = NO;
+            }
+            return YES;
+        }
+
+        if (_shiftSwitchCandidateActive && _shiftSwitchCandidateKeyCode == event.keyCode) {
+            [self toggleEnglishPinyinMode:sender];
+        }
+        _shiftSwitchCandidateActive = NO;
+        return YES;
+    }
+
+    return NO;
 }
 
 - (BOOL)isConfiguredShiftModeSwitchKey:(KeyCode)keyCode {
@@ -160,6 +182,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
 - (void)switchToChineseMode:(id)sender {
     _canReplaceAutoSpaceWithPunctuation = NO;
+    _shiftSwitchCandidateActive = NO;
 
     NSString *bufferedText = [self originalBuffer];
     if (bufferedText && bufferedText.length > 0) {
@@ -173,6 +196,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
 
 - (void)toggleEnglishPinyinMode:(id)sender {
     _canReplaceAutoSpaceWithPunctuation = NO;
+    _shiftSwitchCandidateActive = NO;
 
     NSString *bufferedText = [self originalBuffer];
     BOOL hasBufferedText = bufferedText && bufferedText.length > 0;
