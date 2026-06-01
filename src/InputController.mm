@@ -17,6 +17,7 @@ static const KeyCode KEY_RETURN = 36, KEY_SPACE = 49, KEY_DELETE = 51, KEY_ESC =
 static const KeyCode KEY_1 = 18, KEY_2 = 19, KEY_3 = 20, KEY_4 = 21, KEY_5 = 23, KEY_6 = 22, KEY_7 = 26, KEY_8 = 28, KEY_9 = 25;
 static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KEY_KEYPAD_4 = 86, KEY_KEYPAD_5 = 87,
                      KEY_KEYPAD_6 = 88, KEY_KEYPAD_7 = 89, KEY_KEYPAD_8 = 91, KEY_KEYPAD_9 = 92;
+static YingHanInputMode currentInputMode = YingHanInputModePinyin;
 
 @interface InputController () <HorizontalCandidateWindowControllerDelegate>
 
@@ -174,6 +175,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     }
 
     _inputMode = YingHanInputModeChinese;
+    currentInputMode = _inputMode;
     [self resetContext];
 }
 
@@ -189,6 +191,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
         [self commitCompositionWithoutSpace:sender];
     }
     _inputMode = _inputMode == YingHanInputModeChinese ? YingHanInputModePinyin : YingHanInputModeChinese;
+    currentInputMode = _inputMode;
 
     [self resetContext];
 }
@@ -1211,7 +1214,7 @@ static const KeyCode KEY_KEYPAD_1 = 83, KEY_KEYPAD_2 = 84, KEY_KEYPAD_3 = 85, KE
     _horizontalSelectedLine = 0;
     _candidates = [[NSMutableArray alloc] init];
     _recentWords = [[NSMutableArray alloc] init];
-    _inputMode = YingHanInputModePinyin;
+    _inputMode = currentInputMode;
 }
 
 - (void)deactivateServer:(id)sender {
